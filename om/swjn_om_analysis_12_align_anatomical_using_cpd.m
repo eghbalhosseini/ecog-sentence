@@ -41,8 +41,8 @@ opt.outliers=0.4;       % noise weight
 opt.fgt=0;              % do not use FGT (default)
 opt.normalize=1;        % normalize to unit variance and zero mean before registering (default)
 opt.corresp=0;          % compute correspondence vector at the end of registration (not being estimated by default)
-opt.max_it=1;         % max number of iterations
-opt.tol=1e-3;          % tolerance
+opt.max_it=50;         % max number of iterations
+opt.tol=1e-5;          % tolerance
 
 % do transformation;
 [transform,~] = cpd_register(template.pos,headshape.pos, opt);
