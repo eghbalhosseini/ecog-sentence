@@ -2,7 +2,7 @@
 
 #  om_run_swjn_analysis_12.sh
 #SBATCH --job-name=om_run_swjn_analysis_12
-#SBATCH -t 1:00:00
+#SBATCH -t 20:00:00
 #SBATCH --ntasks=1
 #SBATCH -c 8
 #SBATCH --array=1
@@ -14,6 +14,6 @@
 #SBATCH --error=om_run_swjn_analysis_12_%j.err
 
 module add mit/matlab/2018b
-matlab -nodisplay -r "addpath(genpath('/home/ehoseini/MyCodes/ecog-sentence/')); \
+matlab -singleCompThread -nodisplay -r "addpath(genpath('/home/ehoseini/MyCodes/ecog-sentence/')); \
 swjn_om_analysis_12_align_anatomical_using_cpd;\
 quit;"
