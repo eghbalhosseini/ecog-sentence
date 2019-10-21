@@ -23,7 +23,7 @@ headshape_child_dir='/IMAGING/MATLAB/';
 template_path=strcat([root_dir,subject_id,template_child_dir,'brain_model_raw.mat']);
 headshape_path=strcat([root_dir,subject_id,headshape_child_dir,subject_id,'_brain.mat']);
 % load template
-template_lr = load(full_path);
+template_lr = load(template_path);
 % template=template_lr.cortex;
 template.pos=template_lr.cortex.vert;
 template.tri=template_lr.cortex.tri;
@@ -51,7 +51,7 @@ M(1:3,1:3) = transform.R;
 M(1:3,4)   = transform.t;
 transform.M=M;
 % save transformation;
-save_path=strcat([root_dir,subject_id,child_dir,opt.method,'_iter_',num2str(opt.max_it),'_transform.mat']);
+save_path=strcat([root_dir,subject_id,template_child_dir,opt.method,'_iter_',num2str(opt.max_it),'_transform.mat']);
 save(save_path,'transform');
 fprintf('finished tranformation \n');
 
