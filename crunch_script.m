@@ -16,8 +16,9 @@ data_path='/Users/eghbalhosseiniasl1/MyData/ECoG-sentence';
 save_path='/Users/eghbalhosseiniasl1/MyData/ECoG-sentence/crunched/';
 d= dir([data_path,'/**/*.dat']);
 fprintf(' %d .dat files were found \n', length(d))
+d_image= dir([data_path,'/**/*brain.mat']);
 %% 
-for i=41:length(d)
+for i=1:10%length(d)
     fprintf('extracting %s from %s \n',d(i).name, strcat(d(i).folder,'/',d(i).name));
     subject_op_info=[];
     [signal_broadband,...
@@ -28,7 +29,9 @@ for i=41:length(d)
      signal_hilbert_zs_downsample,...
      states,...
      parameters,...
-     ecog_parameters]=filter_channels_using_schalk({strcat(d(i).folder,'/',d(i).name)},subject_op_info);
+     ecog_parameters,...
+     signal_hilbert_pca_downsample,...
+     signal_hilbert_pca_zs_downsample]=filter_channels_using_schalk({strcat(d(i).folder,'/',d(i).name)},subject_op_info);
   
     subject_name=d(i).folder(strfind(d(i).folder,'AMC')+[0:5]);
     session_name=d(i).name(1:end-4);     
@@ -83,7 +86,8 @@ for i=41:length(d)
     signal_broadband=transpose(signal_broadband);
     signal_hilbert_downsample=transpose(signal_hilbert_downsample);
     signal_hilbert_zs_downsample=transpose(signal_hilbert_zs_downsample);
-    
+    signal_hilbert_pca_downsample=transpose(signal_hilbert_pca_downsample);
+    signal_hilbert_pca_zs_downsample=transpose(signal_hilbert_pca_zs_downsample);
     
     signal_bandpass=cellfun(@transpose,signal_bandpass,'UniformOutput',false);
     signal_envelope=cellfun(@transpose,signal_envelope,'UniformOutput',false);
@@ -120,12 +124,17 @@ for i=41:length(d)
         signal_broadband_parsed={};
         signal_hilbert_downsample_parsed={};
         signal_hilbert_zs_downsample_parsed={};
+        signal_hilbert_pca_downsample_parsed={};
+        signal_hilbert_pca_zs_downsample_parsed={};
         signal_bandpass_envelope_parsed={};
         signal_bandpass_envelope_downsample_parsed={};
         % 
         signal_pre_trial_broadband_parsed={};
         signal_pre_trial_hilbert_downsample_parsed={};
         signal_pre_trial_hilbert_zs_downsample_parsed={};
+        signal_pre_trial_hilbert_pca_downsample_parsed={};
+        signal_pre_trial_hilbert_pca_zs_downsample_parsed={};
+        
         signal_pre_trial_bandpass_envelope_parsed={};
         signal_pre_trial_bandpass_envelope_downsample_parsed={};
         
@@ -149,6 +158,10 @@ for i=41:length(d)
             signal_broadband_parsed{kk,1}=signal_broadband(:,stimulus_index);
             signal_hilbert_downsample_parsed{kk,1}=signal_hilbert_downsample(:,stimuli_downsample_index);
             signal_hilbert_zs_downsample_parsed{kk,1}=signal_hilbert_zs_downsample(:,stimuli_downsample_index);
+            
+            signal_hilbert_pca_downsample_parsed{kk,1}=signal_hilbert_pca_downsample(:,stimuli_downsample_index);
+            signal_hilbert_pca_zs_downsample_parsed{kk,1}=signal_hilbert_pca_zs_downsample(:,stimuli_downsample_index);
+            
             
             signal_bandpass_parsed=[signal_bandpass_parsed;transpose(cellfun(@(x) x(:,stimulus_index),signal_bandpass,'UniformOutput',false ))];
             signal_bandpass_envelope_parsed=[signal_bandpass_envelope_parsed;transpose(cellfun(@(x) x(:,stimulus_index),signal_envelope,'UniformOutput',false ))];
@@ -175,6 +188,9 @@ for i=41:length(d)
         %trial.signal_pre_trial_broadband=signal_broadband(:,stimuli_range(1)+[-info.pre_trial_samples:-1]);
         trial.(strcat('signal','_pre_trial','_hilbert_downsample'))=signal_hilbert_downsample(:,stimuli_downsample_range(1)+[-info.pre_trial_samples_downsample:-1]);
         trial.(strcat('signal','_pre_trial','_hilbert_zs_downsample'))=signal_hilbert_zs_downsample(:,stimuli_downsample_range(1)+[-info.pre_trial_samples_downsample:-1]);
+        trial.(strcat('signal','_pre_trial','_hilbert_pca_downsample'))=signal_hilbert_pca_downsample(:,stimuli_downsample_range(1)+[-info.pre_trial_samples_downsample:-1]);
+        trial.(strcat('signal','_pre_trial','_hilbert_pca_zs_downsample'))=signal_hilbert_pca_zs_downsample(:,stimuli_downsample_range(1)+[-info.pre_trial_samples_downsample:-1]);
+        
         trial.(strcat('signal','_pre_trial','_envelope_dowsample_parsed'))=transpose(cellfun(@(x) x(:,stimuli_downsample_range(1)+[-info.pre_trial_samples_downsample:-1]),signal_evelope_downsample,'UniformOutput',false ));
         trial.(strcat('signal_ave','_pre_trial','_hilbert_downsample'))=nanmean(signal_hilbert_downsample(:,stimuli_downsample_range(1)+[-info.pre_trial_samples_downsample:-1]),2);
         trial.(strcat('signal_ave','_pre_trial','_hilbert_zs_downsample'))=nanmean(signal_hilbert_zs_downsample(:,stimuli_downsample_range(1)+[-info.pre_trial_samples_downsample:-1]),2);
@@ -188,6 +204,8 @@ for i=41:length(d)
         %trial.(strcat('signal','_broadband_parsed'))=signal_broadband_parsed;
         trial.(strcat('signal','_hilbert_downsample_parsed'))=signal_hilbert_downsample_parsed;
         trial.(strcat('signal','_hilbert_zs_downsample_parsed'))=signal_hilbert_zs_downsample_parsed;
+        trial.(strcat('signal','_hilbert_pca_downsample_parsed'))=signal_hilbert_pca_downsample_parsed;
+        trial.(strcat('signal','_hilbert_pca_zs_downsample_parsed'))=signal_hilbert_pca_zs_downsample_parsed;
         %trial.(strcat('signal','_bandpass_parsed'))=signal_bandpass_parsed;
         %trial.(strcat('signal','_envelope_parsed'))=signal_bandpass_envelope_parsed;
         trial.(strcat('signal','_envelope_dowsample_parsed'))=signal_bandpass_envelope_downsample_parsed;

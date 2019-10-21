@@ -27,7 +27,7 @@ end
 
 find_index= @(input_cell) find(cell2mat(cellfun(@(x) ~isempty(x), input_cell,'UniformOutput',false)));
 electrode_group='language';
-
+do_print=0;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%  STEP 1
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -64,7 +64,7 @@ for k=1:length(subject_ids)-1
         word_length=sentences(1).signal_range_downsample(1,2)-sentences(1).signal_range_downsample(1,1)+1;
         % creat a cell with wordposition(row)*time in trial(column) structure
         % hilbert mean (changlab)
-        hilbert_band_envelope=cellfun(@(x) x(1:8),{sentences.signal_hilbert_downsample_parsed},'UniformOutput',false);
+        hilbert_band_envelope=cellfun(@(x) x(1:8),{sentences.signal_hilbert_zs_downsample_parsed},'UniformOutput',false);
         hilbert_band_envelope=[hilbert_band_envelope{:,:}];
         hilbert_band_envelope=cellfun(@transpose,hilbert_band_envelope,'UniformOutput',false);
         % make a words positions*channel* trial tensor
@@ -152,7 +152,7 @@ for k=1:length(subject_ids)-1
     
     
 end
-%% find shared stimuli 
+%% find shared stimuli
 stim_type={'sentence','wordlist','nonwords','jabberwocky'};
 for k=1:size(stim_type,2)
     fprintf(['adding ',stim_type{k},'\n'])
@@ -160,19 +160,19 @@ for k=1:size(stim_type,2)
     for kk=1:size(all_sub_dat,1)
         eval(strcat('B=all_sub_dat(',num2str(kk),').sess_',stim_type{k},'_stim;')) ;
         A=intersect(A,B);
-    end 
+    end
     for kk=1:size(all_sub_dat,1)
         eval(strcat('all_sub_dat(kk).sess_',stim_type{k},'_stim_shared=A;')) ;
     end
 end
-   
+
 
 
 %%
 sub_ica_dat=struct;
 find_first_index= @(input_cell,val) find(cell2mat(cellfun(@(x) ~isempty(x), input_cell,'UniformOutput',false)),val,'first');
 stim_type={'sentence','wordlist','nonwords','jabberwocky'};
-word_win=[1:135];% [0,450] 
+word_win=[1:135];% [0,450]
 for k=1:size(stim_type,2)
     fprintf(['adding ',stim_type{k},' electrode:stim\n'])
     elec_stim_mat=[];
@@ -187,11 +187,11 @@ for k=1:size(stim_type,2)
         % get hilbert
         eval(strcat('Hilb=all_sub_dat(',num2str(kk),').sess_',stim_type{k},'_hilb_tensor;'));% get_stim_shared
         eval(strcat('Stim_L=all_sub_dat(',num2str(kk),').sess_stim_length;'));% get_word_length
- 
+        
         El=cellfun(@(x) double(squeeze(Hilb(:,x,:))),idx_1st','UniformOutput',false);
         
         El_demeaned=cellfun(@(x) transpose(bsxfun(@minus, x', mean(x'))),El,'UniformOutput',false);
-        
+        El_demeaned=El;
         El_cut_demeaned=[];
         El_cut=[];
         a=size(El_demeaned{1},1);
@@ -211,15 +211,15 @@ for k=1:size(stim_type,2)
         elec_stim_str=[elec_stim_str;El_string];
         elec_stim_wordpos=[elec_stim_wordpos;El_wordpos];
         
-%         figure
-%         for i=1:size(El_cut_ave,1)    
-%         a=reshape(El_cut_demeaned_ave(i,:)',8,[]);
-%         subplot(7,7,i)
-%         plot(nanmean(a,2))
-%         hold on 
-%         axis tight
-%         end 
-%         
+        %         figure
+        %         for i=1:size(El_cut_ave,1)
+        %         a=reshape(El_cut_demeaned_ave(i,:)',8,[]);
+        %         subplot(7,7,i)
+        %         plot(nanmean(a,2))
+        %         hold on
+        %         axis tight
+        %         end
+        %
     end
     eval(strcat('sub_ica_dat.sess_',stim_type{k},'_elec_stim_mat=elec_stim_mat;')) ;
     eval(strcat('sub_ica_dat.sess_',stim_type{k},'_elec_stim_str=elec_stim_str;')) ;
@@ -230,19 +230,19 @@ end
 condition='sentence';
 switch condition
     case 'sentence'
-        ica_mat=sub_ica_dat.sess_sentence_elec_stim_mat';  
-        stim_str=sub_ica_dat.sess_sentence_elec_stim_str(1,:);  
+        ica_mat=sub_ica_dat.sess_sentence_elec_stim_mat';
+        stim_str=sub_ica_dat.sess_sentence_elec_stim_str(1,:);
     case 'nonwords'
         ica_mat=sub_ica_dat.sess_nonwords_elec_stim_mat';
-        stim_str=sub_ica_dat.sess_nonwords_elec_stim_str(1,:);  
+        stim_str=sub_ica_dat.sess_nonwords_elec_stim_str(1,:);
     case 'wordlist'
         ica_mat=sub_ica_dat.sess_wordlist_elec_stim_mat';
-        stim_str=sub_ica_dat.sess_wordlist_elec_stim_str(1,:);  
+        stim_str=sub_ica_dat.sess_wordlist_elec_stim_str(1,:);
     case 'jabberwocky'
         ica_mat=sub_ica_dat.sess_jabberwocky_elec_stim_mat';
-        stim_str=sub_ica_dat.sess_jabberwocky_elec_stim_str(1,:);  
+        stim_str=sub_ica_dat.sess_jabberwocky_elec_stim_str(1,:);
 end
-close all 
+close all
 R_width=.55;
 
 num_rows=5;
@@ -263,7 +263,6 @@ for K=5
     PLOT_FIGURES = 0;
     RAND_SEED = 1;
     [R_inferred, W_inferred,component_var] = nonparametric_ica(ica_mat, K, N_RANDOM_INITS, PLOT_FIGURES, RAND_SEED);
-    [coeff,score,latent,tsquared,explained,mu] = pca(ica_mat') ;
     fig1=figure;
     set(gcf,'position',[1376 353 988 992])
     axes('position',[.1,.6,.5,.3])
@@ -306,15 +305,17 @@ for K=5
         mkdir(strcat(analysis_path))
     end
     coeff=450/135;
+    if do_print==1
     print(fig1,'-bestfit','-painters', '-dpdf', strcat(analysis_path,'/','ECoG_ICA_',condition,'_num_components_',num2str(K),'_window_'...
         ,sprintf('%1d-%1d',coeff*(min(word_win)-1),coeff*max(word_win)),'.pdf'));
     % reorder based on wordpos
+    end 
     word_pos=sub_ica_dat.sess_sentence_elec_stim_wordpos(1,:);
     sort_idx={};
     unique_word_pos=unique(word_pos);
     for i=1:length(unique(word_pos))
         sort_idx=[sort_idx,find(word_pos==unique_word_pos(i))];
-    end 
+    end
     ax_min=floor(min(R_inferred(:)));
     ax_max=ceil(max(R_inferred(:)));
     for i=1:K
@@ -334,11 +335,11 @@ for K=5
         set(gca,'box','off')
         ax.YLim=[ax_min,ax_max];
         ax.XAxis.Visible='off';
-        if i==1 
-        xlabel([condition,': Feature dim sorted by word position']);
-        ax.XAxis.Visible='on';
-        ax.XAxis.FontWeight='bold'
-        end 
+        if i==1
+            xlabel([condition,': Feature dim sorted by word position']);
+            ax.XAxis.Visible='on';
+            ax.XAxis.FontWeight='bold'
+        end
         ax.Title.String=[sprintf('component %d ',i),sprintf('; var explained: %%%1.1f',component_var(i))]
         %
         ax1=axes('position',[.1+R_width,R_start(R_indx),.2,R_height]);
@@ -350,31 +351,31 @@ for K=5
         
         set(gca,'box','off')
         ax1.XAxis.Visible='off';
-       if i==1 
-        ax1.Title.String={'average over word position'};
-        legend('show','position',[[.35+R_width,R_start(R_indx),.05,R_height/1.5]])
-       end 
+        if i==1
+            ax1.Title.String={'average over word position'};
+            legend('show','position',[[.35+R_width,R_start(R_indx),.05,R_height/1.5]])
+        end
         set(gca,'box','off')
         
         if ~mod(i,total_plots) | i==K
-        %legend('show','Location','northeastoutside')
-        p=p+1;
-        if ~exist(strcat(analysis_path))
-            mkdir(strcat(analysis_path))
-        end 
-
-        set(gcf,'PaperPosition',[.25 .25 8 6])
-        print(f,'-bestfit', '-painters','-dpdf', strcat(analysis_path,'/','ECoG_ICA_',condition,'_num_components_',num2str(K),...
-            '_window_'...
-        ,sprintf('%1d-%1d',coeff*(min(word_win)-1),coeff*max(word_win)),'_fig_',num2str(fix((i-1)/num_rows)+2),'.pdf'));
-    end        
+            %legend('show','Location','northeastoutside')
+            p=p+1;
+            if ~exist(strcat(analysis_path))
+                mkdir(strcat(analysis_path))
+            end
+            if do_print==1
+                set(gcf,'PaperPosition',[.25 .25 8 6])
+                print(f,'-bestfit', '-painters','-dpdf', strcat(analysis_path,'/','ECoG_ICA_',condition,'_num_components_',num2str(K),...
+                    '_window_'...
+                    ,sprintf('%1d-%1d',coeff*(min(word_win)-1),coeff*max(word_win)),'_fig_',num2str(fix((i-1)/num_rows)+2),'.pdf'));
+            end
+        end
     end
-    close all;
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % plot top 5 and bottom loadings for each components 
+    % plot top 5 and bottom loadings for each components
     for i=1:K
         R_indx=i-num_rows*fix((i-1)/num_rows);
-        f=figure(fix((i-1)/num_rows)+2);
+        f=figure(5+fix((i-1)/num_rows)+2);
         set(gcf,'position',[29,12,852,1270])
         colors = cbrewer('div', 'RdYlBu', size(stim_str,2));
         colors= flipud(colors);
@@ -393,8 +394,8 @@ for K=5
         A_bottom=A_order(idx_bottom);
         stim_bottom=stim_str(idx(idx_bottom));
         word_idx_bottom=word_pos(idx(idx_bottom));
-        hold on 
-        % top 
+        hold on
+        % top
         offset=1;
         A=A_top;
         x=[1:length(A)]';
@@ -416,45 +417,46 @@ for K=5
         XLim_bottom=[floor(min(A)),ceil(max(A))];
         ax.Title.String={sprintf('component %d ',i),sprintf('var explained: %%%1.1f',component_var(i))};
         ax.Title.FontSize=8;
-        % 
+        %
         ax.YLim=[-2,max([length(bl),length(bl1)])];
         
-        % fix x axis 
+        % fix x axis
         ax.XAxis.Visible='off';
         ax.YAxis.Visible='off';
         set(gca,'box','off');
-        % top 
+        % top
         plot(offset+XLim_top,[0,0],'k','LineWidth',.5)
         arrayfun(@(x) plot([x,x],[0,-.5],'k','LineWidth',.5),offset+XLim_top)
         arrayfun(@(x,y) text(x+offset,-.5,num2str(x),'VerticalAlignment','top','HorizontalAlignment','center','fontsize',7),XLim_top);
         text(mean(offset+XLim_top),-2,{'above', 'median'},'HorizontalAlignment','center','VerticalAlignment','top','fontsize',7)
-        % bottom 
+        % bottom
         plot(-offset+XLim_bottom,[0,0],'k','LineWidth',.5)
         arrayfun(@(x) plot([x,x],[0,-.5],'k','LineWidth',.5),-offset+XLim_bottom)
         arrayfun(@(x,y) text(-offset+x,-.5,num2str(x),'VerticalAlignment','top','HorizontalAlignment','center','fontsize',7),XLim_bottom);
         text(mean(-offset+XLim_bottom),-2,{'below', 'median'},'HorizontalAlignment','center','VerticalAlignment','top','fontsize',7)
-
+        
         %
-
+        
         if ~mod(i,total_plots) | i==K
-        %legend('show','Location','northeastoutside')
-        p=p+1;
-        if ~exist(strcat(analysis_path))
-            mkdir(strcat(analysis_path))
-        end 
-
-        set(gcf,'PaperPosition',[.25 .25 8 6])
-        print(f,'-painters','-fillpage', '-dpdf', strcat(analysis_path,'/','ECoG_ICA_',condition,'_num_components_',num2str(K),...
-        '_component_loading_fig_',num2str(fix((i-1)/num_rows)+2),'_window_'...
-        ,sprintf('%1d-%1d',coeff*(min(word_win)-1),coeff*max(word_win)),'.pdf'));
-    end        
+            %legend('show','Location','northeastoutside')
+            p=p+1;
+            if ~exist(strcat(analysis_path))
+                mkdir(strcat(analysis_path))
+            end
+            if do_print==1
+                set(gcf,'PaperPosition',[.25 .25 8 6])
+                print(f,'-painters','-fillpage', '-dpdf', strcat(analysis_path,'/','ECoG_ICA_',condition,'_num_components_',num2str(K),...
+                    '_component_loading_fig_',num2str(fix((i-1)/num_rows)+2),'_window_'...
+                    ,sprintf('%1d-%1d',coeff*(min(word_win)-1),coeff*max(word_win)),'.pdf'));
+            end
+        end
     end
-    close all ;
+  
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %%%% do the first top component and last 5 
+    %%%% do the first top component and last 5
     for i=1:K
         R_indx=i-num_rows*fix((i-1)/num_rows);
-        f=figure(fix((i-1)/num_rows)+2);
+        f=figure(10+fix((i-1)/num_rows)+2);
         set(gcf,'position',[29,12,852,1270])
         colors = cbrewer('div', 'RdYlBu', size(stim_str,2));
         colors= flipud(colors);
@@ -464,18 +466,21 @@ for K=5
         colors_bottom= flipud(colors_bottom);
         ax=axes('position',[R_start(R_indx),0.04,.1,.92]);
         
-        [A_order,idx]=sort(R_inferred(:,i));
+        R_component=R_inferred(:,i);
+        [A_order,idx]=sort(R_component);
         idx_sub=flipud(idx(end-4:end));
         a=arrayfun(@(x) [1:8]-x, word_pos(idx_sub)','UniformOutput',false);
+        max_pos=find([a{:}]==0);
         sent_pos=cellfun(@(x,y) y+x,a,mat2cell(idx_sub,ones(size(idx_sub))),'UniformOutput',false);
         sent=cellfun(@(x) stim_str(x),sent_pos,'UniformOutput',false);
-        val=cellfun(@(x) R_inferred(x),sent_pos,'UniformOutput',false);
+        val=cellfun(@(x) R_component(x)',sent_pos,'UniformOutput',false);
         y_val_1=arrayfun(@(x) [1:8]+8*x+2*x, [0:4]','UniformOutput',false);
         y_val=fliplr([y_val_1{:}]);
         val=([val{:}]);
         %
-        hold on 
-        offset=abs(min(A_order))+abs(min(A_order))+1;
+        hold on
+        %offset=abs(min(A_order))+abs(min(A_order))+1;
+        offset=max(abs(A_order));
         bl=arrayfun(@(x,y) plot(offset+[0,x],[y,y],'k','LineWidth',10),val,y_val );
         XLim_top=[floor(min(val)),ceil(max(val))];
         colors=cbrewer('seq','Oranges',size(a,2)+60);
@@ -485,17 +490,19 @@ for K=5
         text_x=val;
         text_x(text_x<0)=0;
         tx=arrayfun(@(x,y,z) text(x+offset+.5,y,a(z),'HorizontalAlignment','left'),text_x,y_val,1:length(bl) );
-        arrayfun(@(x) set(tx(x),'fontsize',6),1:length(bl));
+        arrayfun(@(x) set(tx(x),'fontsize',4),1:length(bl));
+        arrayfun(@(x) set(tx(x),'fontweight','bold','fontsize',5,'fontangle','italic','color',[.5,0,0]),max_pos);
         %plot(0*y_val+offset,y_val,'k--','LineWidth',.5);
-        cellfun(@(x) plot(0*x+offset,x,'k--','LineWidth',.5),y_val_1)
+        cellfun(@(x) plot(0*x+offset,x,'k--','LineWidth',.5),y_val_1);
         
         % bottom
         
         idx_sub=flipud(idx(1:5));
         a=arrayfun(@(x) [1:8]-x, word_pos(idx_sub)','UniformOutput',false);
+        max_pos=find([a{:}]==0);
         sent_pos=cellfun(@(x,y) y+x,a,mat2cell(idx_sub,ones(size(idx_sub))),'UniformOutput',false);
         sent=cellfun(@(x) stim_str(x),sent_pos,'UniformOutput',false);
-        val=cellfun(@(x) R_inferred(x),sent_pos,'UniformOutput',false);
+        val=cellfun(@(x) R_component(x)',sent_pos,'UniformOutput',false);
         y_val=arrayfun(@(x) [1:8]+8*x+2*x, [0:4]','UniformOutput',false);
         y_val=fliplr([y_val{:}]);
         val=([val{:}]);
@@ -510,41 +517,45 @@ for K=5
         text_x=val;
         text_x(text_x>0)=0;
         tx=arrayfun(@(x,y,z) text(x-offset-.5,y,a(z),'HorizontalAlignment','right'),text_x,y_val,1:length(bl) );
-        arrayfun(@(x) set(tx(x),'fontsize',6),1:length(bl));
-        cellfun(@(x) plot(0*x-offset,x,'k--','LineWidth',.5),y_val_1)
-        % 
-        
-        % 
+        arrayfun(@(x) set(tx(x),'fontsize',4),1:length(bl));
+        arrayfun(@(x) set(tx(x),'fontweight','bold','fontsize',5,'fontangle','italic','color',[.5,0,0]),max_pos);
+        cellfun(@(x) plot(0*x-offset,x,'k--','LineWidth',.5),y_val_1);
+        %
+        ax.Title.String=sprintf('component %d ; %%%1.1f ',i,component_var(i));
+        ax.Title.Position(2)=49;
+        ax.Title.FontSize=8;
+        %
         ax.YLim=[-2,max(y_val)];
         
-        % fix x axis 
+        % fix x axis
         ax.XAxis.Visible='off';
         ax.YAxis.Visible='off';
         set(gca,'box','off');
-        % top 
-        plot(offset+XLim_top,[0,0],'k','LineWidth',.5)
-        arrayfun(@(x) plot([x,x],[0,-.1],'k','LineWidth',.1),offset+XLim_top)
+        % top
+        plot(offset+XLim_top,[0,0],'k','LineWidth',.5);
+        arrayfun(@(x) plot([x,x],[0,-.1],'k','LineWidth',.1),offset+XLim_top);
         arrayfun(@(x,y) text(x+offset,-.5,num2str(x),'VerticalAlignment','top','HorizontalAlignment','center','fontsize',7),XLim_top);
-        text(mean(offset+XLim_top),-1,{'top'},'HorizontalAlignment','center','VerticalAlignment','top','fontsize',7)
-        % bottom 
-        plot(-offset+XLim_bottom,[0,0],'k','LineWidth',.5)
-        arrayfun(@(x) plot([x,x],[0,-.1],'k','LineWidth',.5),-offset+XLim_bottom)
+        text(mean(offset+XLim_top),-1,{'top'},'HorizontalAlignment','center','VerticalAlignment','top','fontsize',7);
+        % bottom ;
+        plot(-offset+XLim_bottom,[0,0],'k','LineWidth',.5);
+        arrayfun(@(x) plot([x,x],[0,-.1],'k','LineWidth',.5),-offset+XLim_bottom);
         arrayfun(@(x,y) text(-offset+x,-.5,num2str(x),'VerticalAlignment','top','HorizontalAlignment','center','fontsize',7),XLim_bottom);
-        text(mean(-offset+XLim_bottom),-1,{'bottom'},'HorizontalAlignment','center','VerticalAlignment','top','fontsize',7)
+        text(mean(-offset+XLim_bottom),-1,{'bottom'},'HorizontalAlignment','center','VerticalAlignment','top','fontsize',7);
         %
-
+        
         if ~mod(i,total_plots) | i==K
-        %legend('show','Location','northeastoutside')
-        p=p+1;
-        if ~exist(strcat(analysis_path))
-            mkdir(strcat(analysis_path))
-        end 
-
-        set(gcf,'PaperPosition',[.25 .25 8 6])
-        print(f,'-painters','-fillpage', '-dpdf', strcat(analysis_path,'/','ECoG_ICA_',condition,'_num_components_',num2str(K),...
-        '_component_top_bottom_loading_',num2str(fix((i-1)/num_rows)+2),'_window_'...
-        ,sprintf('%1d-%1d',coeff*(min(word_win)-1),coeff*max(word_win)),'.pdf'));
-    end        
+            %legend('show','Location','northeastoutside')
+            p=p+1;
+            if ~exist(strcat(analysis_path))
+                mkdir(strcat(analysis_path));
+            end
+            if do_print==1
+                set(gcf,'PaperPosition',[.25 .25 8 6])
+                print(f,'-painters','-fillpage', '-dpdf', strcat(analysis_path,'/','ECoG_ICA_',condition,'_num_components_',num2str(K),...
+                    '_component_top_bottom_loading_',num2str(fix((i-1)/num_rows)+2),'_window_'...
+                    ,sprintf('%1d-%1d',coeff*(min(word_win)-1),coeff*max(word_win)),'.pdf'));
+            end
+        end
     end
     
     
@@ -556,19 +567,19 @@ sub_pca_dat=sub_ica_dat;
 condition='sentence';
 switch condition
     case 'sentence'
-        pca_mat=sub_pca_dat.sess_sentence_elec_stim_mat';  
-        stim_str=sub_pca_dat.sess_sentence_elec_stim_str(1,:);  
+        pca_mat=sub_pca_dat.sess_sentence_elec_stim_mat';
+        stim_str=sub_pca_dat.sess_sentence_elec_stim_str(1,:);
     case 'nonwords'
         pca_mat=sub_pca_dat.sess_nonwords_elec_stim_mat';
-        stim_str=sub_pca_dat.sess_nonwords_elec_stim_str(1,:);  
+        stim_str=sub_pca_dat.sess_nonwords_elec_stim_str(1,:);
     case 'wordlist'
         pca_mat=sub_pca_dat.sess_wordlist_elec_stim_mat';
-        stim_str=sub_pca_dat.sess_wordlist_elec_stim_str(1,:);  
+        stim_str=sub_pca_dat.sess_wordlist_elec_stim_str(1,:);
     case 'jabberwocky'
         pca_mat=sub_pca_dat.sess_jabberwocky_elec_stim_mat';
-        stim_str=sub_pca_dat.sess_jabberwocky_elec_stim_str(1,:);  
+        stim_str=sub_pca_dat.sess_jabberwocky_elec_stim_str(1,:);
 end
-close all 
+close all
 R_width=.55;
 num_rows=5;
 plot_dist=.03;
@@ -626,29 +637,31 @@ for K=5
     xlabel('component');
     x_lim=get(gca,'xlim');
     axes('position',[.65,.75,.3,.1])
-    plot(cumsum(component_var),'k','Marker','o')
+    plot(cumsum(component_var),'k','Marker','o');
     set(gca,'xlim',x_lim);
     set(gca,'box','off');
     ylabel('%total var explained');
     if ~exist(strcat(analysis_path))
-        mkdir(strcat(analysis_path))
+        mkdir(strcat(analysis_path));
     end
     coeff=450/135;
+    if do_print==1 
     print(fig1,'-bestfit','-painters', '-dpdf', strcat(analysis_path,'/','ECoG_pca_',condition,'_num_components_',num2str(K),'_window_'...
         ,sprintf('%1d-%1d',coeff*(min(word_win)-1),coeff*max(word_win)),'.pdf'));
+    end 
     % reorder based on wordpos
     word_pos=sub_pca_dat.sess_sentence_elec_stim_wordpos(1,:);
     sort_idx={};
     unique_word_pos=unique(word_pos);
     for i=1:length(unique(word_pos))
         sort_idx=[sort_idx,find(word_pos==unique_word_pos(i))];
-    end 
+    end
     ax_min=floor(min(R_inferred(:)));
     ax_max=ceil(max(R_inferred(:)));
     for i=1:K
         R_indx=i-num_rows*fix((i-1)/num_rows);
         f=figure(fix((i-1)/num_rows)+2);
-        set(gcf,'position',[29,12,852,1270])
+        set(gcf,'position',[29,12,852,1270]);
         colors = cbrewer('div', 'RdYlBu', 8);
         ax=axes('position',[.05,R_start(R_indx),R_width,R_height]);
         A=cellfun(@(x) transpose(R_inferred(x,i)),sort_idx,'UniformOutput',false);
@@ -657,17 +670,17 @@ for K=5
         bl=bar(cell2mat(R_inferred_sort),'Facecolor','flat');
         bar_color=colors(word_pos(cell2mat(sort_idx)),:);
         set(bl,'Linestyle','none');
-        set(bl,'Displayname','sentences')
+        
         bl.CData=bar_color;
         set(gca,'box','off')
         %ax.YLim=[ax_min,ax_max];
         ax.XAxis.Visible='off';
-        if i==1 
-        xlabel([condition,': Feature dim sorted by word position']);
-        ax.XAxis.Visible='on';
-        ax.XAxis.FontWeight='bold'
-        end 
-        ax.Title.String=[sprintf('component %d ',i),sprintf('; var explained: %%%1.1f',component_var(i))]
+        if i==1
+            xlabel([condition,': Feature dim sorted by word position']);
+            ax.XAxis.Visible='on';
+            ax.XAxis.FontWeight='bold';
+        end
+        ax.Title.String=[sprintf('component %d ',i),sprintf('; var explained: %%%1.1f',component_var(i))];
         %
         ax1=axes('position',[.1+R_width,R_start(R_indx),.2,R_height]);
         hold on;
@@ -678,32 +691,33 @@ for K=5
         
         set(gca,'box','off')
         ax1.XAxis.Visible='off';
-       if i==1 
-        ax1.Title.String={'average over word position'};
-        legend('show','position',[[.35+R_width,R_start(R_indx),.05,R_height/1.5]])
-       end 
+        if i==1
+            ax1.Title.String={'average over word position'};
+            legend('show','position',[[.35+R_width,R_start(R_indx),.05,R_height/1.5]]);
+        end
         set(gca,'box','off')
         
         if ~mod(i,total_plots) | i==K
-        %legend('show','Location','northeastoutside')
-        p=p+1;
-        if ~exist(strcat(analysis_path))
-            mkdir(strcat(analysis_path))
-        end 
-
-        set(gcf,'PaperPosition',[.25 .25 8 6])
-        print(f,'-bestfit', '-painters','-dpdf', strcat(analysis_path,'/','ECoG_pca_',condition,'_num_components_',num2str(K),...
-            '_window_'...
-        ,sprintf('%1d-%1d',coeff*(min(word_win)-1),coeff*max(word_win)),'_fig_',num2str(fix((i-1)/num_rows)+2),'.pdf'));
-    end        
+            %legend('show','Location','northeastoutside')
+            p=p+1;
+            if ~exist(strcat(analysis_path))
+                mkdir(strcat(analysis_path));
+            end
+            if do_print==1
+                set(gcf,'PaperPosition',[.25 .25 8 6])
+                print(f,'-bestfit', '-painters','-dpdf', strcat(analysis_path,'/','ECoG_pca_',condition,'_num_components_',num2str(K),...
+                    '_window_'...
+                    ,sprintf('%1d-%1d',coeff*(min(word_win)-1),coeff*max(word_win)),'_fig_',num2str(fix((i-1)/num_rows)+2),'.pdf'));
+            end
+        end
     end
-    close all;
+    
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % plot top 5 and bottom loadings for each components 
+    % plot top 5 and bottom loadings for each components
     for i=1:K
         R_indx=i-num_rows*fix((i-1)/num_rows);
-        f=figure(fix((i-1)/num_rows)+2);
-        set(gcf,'position',[29,12,852,1270])
+        f=figure(5+fix((i-1)/num_rows)+2);
+        set(gcf,'position',[29,12,852,1270]);
         colors = cbrewer('div', 'RdYlBu', size(stim_str,2));
         colors= flipud(colors);
         colors_top=cbrewer('seq','Oranges',size(stim_str,2));
@@ -721,8 +735,8 @@ for K=5
         A_bottom=A_order(idx_bottom);
         stim_bottom=stim_str(idx(idx_bottom));
         word_idx_bottom=word_pos(idx(idx_bottom));
-        hold on 
-        % top 
+        hold on
+        % top
         offset=mean(abs(A_order));
         A=A_top;
         x=[1:length(A)]';
@@ -744,88 +758,93 @@ for K=5
         XLim_bottom=[min(A),max(A)];
         ax.Title.String={sprintf('component %d ',i),sprintf('var explained: %%%1.1f',component_var(i))};
         ax.Title.FontSize=8;
-        % 
+        %
         ax.YLim=[-2,max([length(bl),length(bl1)])];
         
-        % fix x axis 
+        % fix x axis
         ax.XAxis.Visible='off';
         ax.YAxis.Visible='off';
         set(gca,'box','off');
-        % top 
-        plot(offset+XLim_top,[0,0],'k','LineWidth',.5)
-        arrayfun(@(x) plot([x,x],[0,-.5],'k','LineWidth',.5),offset+XLim_top)
+        % top
+        plot(offset+XLim_top,[0,0],'k','LineWidth',.5);
+        arrayfun(@(x) plot([x,x],[0,-.5],'k','LineWidth',.5),offset+XLim_top);
         arrayfun(@(x,y) text(x+offset,-.5,sprintf('%1.1f',x),'VerticalAlignment','top','HorizontalAlignment','center','fontsize',7),XLim_top);
-        text(mean(offset+XLim_top),-2,{'above', 'median'},'HorizontalAlignment','center','VerticalAlignment','top','fontsize',7)
-        % bottom 
-        plot(-offset+XLim_bottom,[0,0],'k','LineWidth',.5)
-        arrayfun(@(x) plot([x,x],[0,-.5],'k','LineWidth',.5),-offset+XLim_bottom)
+        text(mean(offset+XLim_top),-2,{'above', 'median'},'HorizontalAlignment','center','VerticalAlignment','top','fontsize',7);
+        % bottom
+        plot(-offset+XLim_bottom,[0,0],'k','LineWidth',.5);
+        arrayfun(@(x) plot([x,x],[0,-.5],'k','LineWidth',.5),-offset+XLim_bottom);
         arrayfun(@(x,y) text(-offset+x,-.5,sprintf('%1.1f',x),'VerticalAlignment','top','HorizontalAlignment','center','fontsize',7),XLim_bottom);
         text(mean(-offset+XLim_bottom),-2,{'below', 'median'},'HorizontalAlignment','center','VerticalAlignment','top','fontsize',7);
         %
         if ~mod(i,total_plots) | i==K
-        %legend('show','Location','northeastoutside')
-        p=p+1;
-        if ~exist(strcat(analysis_path))
-            mkdir(strcat(analysis_path))
-        end 
-
-        set(gcf,'PaperPosition',[.25 .25 8 6])
-        print(f,'-painters','-fillpage', '-dpdf', strcat(analysis_path,'/','ECoG_pca_',condition,'_num_components_',num2str(K),...
-        '_component_loading_fig_',num2str(fix((i-1)/num_rows)+2),'_window_'...
-        ,sprintf('%1d-%1d',coeff*(min(word_win)-1),coeff*max(word_win)),'.pdf'));
-    end        
+            %legend('show','Location','northeastoutside')
+            p=p+1;
+            if ~exist(strcat(analysis_path))
+                mkdir(strcat(analysis_path));
+            end
+            if do_print==1
+                set(gcf,'PaperPosition',[.25 .25 8 6]);
+                print(f,'-painters','-fillpage', '-dpdf', strcat(analysis_path,'/','ECoG_pca_',condition,'_num_components_',num2str(K),...
+                    '_component_loading_fig_',num2str(fix((i-1)/num_rows)+2),'_window_'...
+                    ,sprintf('%1d-%1d',coeff*(min(word_win)-1),coeff*max(word_win)),'.pdf'));
+            end
+        end
     end
-    close all ;
+    
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %%%% do the first top component and last 5 
+    %%%% do the first top component and last 5
     for i=1:K
         R_indx=i-num_rows*fix((i-1)/num_rows);
-        f=figure(fix((i-1)/num_rows)+2);
-        set(gcf,'position',[29,12,852,1270])
+        f=figure(10+fix((i-1)/num_rows)+2);
+        set(gcf,'position',[29,12,852,1270]);
         colors = cbrewer('div', 'RdYlBu', size(stim_str,2));
         colors= flipud(colors);
         colors_top=cbrewer('seq','Oranges',size(stim_str,2));
         %colors_top= flipud(colors_top);
         colors_bottom=cbrewer('seq','Blues',size(stim_str,2));
         colors_bottom= flipud(colors_bottom);
-        ax=axes('position',[R_start(R_indx),0.04,.1,.92]);
+        ax=axes('position',[R_start(R_indx)+i*.02,0.04,.1,.92]);
         
-        [A_order,idx]=sort(R_inferred(:,i));
+        R_component=R_inferred(:,i);
+        [A_order,idx]=sort(R_component);
         idx_sub=flipud(idx(end-4:end));
         a=arrayfun(@(x) [1:8]-x, word_pos(idx_sub)','UniformOutput',false);
+        max_pos=find([a{:}]==0);
         sent_pos=cellfun(@(x,y) y+x,a,mat2cell(idx_sub,ones(size(idx_sub))),'UniformOutput',false);
         sent=cellfun(@(x) stim_str(x),sent_pos,'UniformOutput',false);
-        val=cellfun(@(x) R_inferred(x),sent_pos,'UniformOutput',false);
+        val=cellfun(@(x) R_component(x)',sent_pos,'UniformOutput',false);
         y_val_1=arrayfun(@(x) [1:8]+8*x+2*x, [0:4]','UniformOutput',false);
         y_val=fliplr([y_val_1{:}]);
         val=([val{:}]);
         %
-        hold on 
-        offset=abs(min(A_order))+abs(min(A_order))+1;
+        hold on
+        offset=max(abs(A_order));
         bl=arrayfun(@(x,y) plot(offset+[0,x],[y,y],'k','LineWidth',10),val,y_val );
-        XLim_top=[floor(min(val)),ceil(max(val))];
+        XLim_top=[(min(val)),(max(val))];
         colors=cbrewer('seq','Oranges',size(a,2)+60);
         colors= flipud(colors);
         arrayfun(@(x) set(bl(x),'color',colors(x,:)),1:length(bl));
         a=[sent{:}];
         text_x=val;
         text_x(text_x<0)=0;
-        tx=arrayfun(@(x,y,z) text(x+offset+.5,y,a(z),'HorizontalAlignment','left'),text_x,y_val,1:length(bl) );
-        arrayfun(@(x) set(tx(x),'fontsize',6),1:length(bl));
+        tx=arrayfun(@(x,y,z) text(x+offset+.05,y,a(z),'HorizontalAlignment','left'),text_x,y_val,1:length(bl) );
+        arrayfun(@(x) set(tx(x),'fontsize',4),1:length(bl));
+        arrayfun(@(x) set(tx(x),'fontweight','bold','fontsize',5,'fontangle','italic','color',[.5,0,0]),max_pos);
         %plot(0*y_val+offset,y_val,'k--','LineWidth',.5);
-        cellfun(@(x) plot(0*x+offset,x,'k--','LineWidth',.5),y_val_1)
+        cellfun(@(x) plot(0*x+offset,x,'k--','LineWidth',.5),y_val_1);
         
         % bottom
         
         idx_sub=flipud(idx(1:5));
         a=arrayfun(@(x) [1:8]-x, word_pos(idx_sub)','UniformOutput',false);
+        max_pos=find([a{:}]==0);
         sent_pos=cellfun(@(x,y) y+x,a,mat2cell(idx_sub,ones(size(idx_sub))),'UniformOutput',false);
         sent=cellfun(@(x) stim_str(x),sent_pos,'UniformOutput',false);
-        val=cellfun(@(x) R_inferred(x),sent_pos,'UniformOutput',false);
+        val=cellfun(@(x) R_component(x)',sent_pos,'UniformOutput',false);
         y_val=arrayfun(@(x) [1:8]+8*x+2*x, [0:4]','UniformOutput',false);
         y_val=fliplr([y_val{:}]);
         val=([val{:}]);
-        XLim_bottom=[floor(min(val)),ceil(max(val))];
+        XLim_bottom=[(min(val)),(max(val))];
         bl=arrayfun(@(x,y) plot(-offset+[0,x],[y,y],'k','LineWidth',10),val,y_val );
         
         colors=cbrewer('seq','Blues',size(a,2)+100);
@@ -835,42 +854,46 @@ for K=5
         a=[sent{:}];
         text_x=val;
         text_x(text_x>0)=0;
-        tx=arrayfun(@(x,y,z) text(x-offset-.5,y,a(z),'HorizontalAlignment','right'),text_x,y_val,1:length(bl) );
-        arrayfun(@(x) set(tx(x),'fontsize',6),1:length(bl));
-        cellfun(@(x) plot(0*x-offset,x,'k--','LineWidth',.5),y_val_1)
-        % 
-        
-        % 
+        tx=arrayfun(@(x,y,z) text(x-offset-.05,y,a(z),'HorizontalAlignment','right'),text_x,y_val,1:length(bl) );
+        arrayfun(@(x) set(tx(x),'fontsize',4),1:length(bl));
+        arrayfun(@(x) set(tx(x),'fontweight','bold','fontsize',5,'fontangle','italic','color',[.5,0,0]),max_pos);
+        cellfun(@(x) plot(0*x-offset,x,'k--','LineWidth',.5),y_val_1);
+        %
+        ax.Title.String=sprintf('component %d ; %%%1.1f ',i,component_var(i));
+        ax.Title.Position(2)=49;
+        ax.Title.FontSize=8;
+        %
         ax.YLim=[-2,max(y_val)];
         
-        % fix x axis 
+        % fix x axis
         ax.XAxis.Visible='off';
         ax.YAxis.Visible='off';
         set(gca,'box','off');
-        % top 
-        plot(offset+XLim_top,[0,0],'k','LineWidth',.5)
-        arrayfun(@(x) plot([x,x],[0,-.1],'k','LineWidth',.1),offset+XLim_top)
-        arrayfun(@(x,y) text(x+offset,-.5,num2str(x),'VertpcalAlignment','top','HorizontalAlignment','center','fontsize',7),XLim_top);
-        text(mean(offset+XLim_top),-1,{'top'},'HorizontalAlignment','center','VertpcalAlignment','top','fontsize',7)
-        % bottom 
-        plot(-offset+XLim_bottom,[0,0],'k','LineWidth',.5)
-        arrayfun(@(x) plot([x,x],[0,-.1],'k','LineWidth',.5),-offset+XLim_bottom)
-        arrayfun(@(x,y) text(-offset+x,-.5,num2str(x),'VertpcalAlignment','top','HorizontalAlignment','center','fontsize',7),XLim_bottom);
-        text(mean(-offset+XLim_bottom),-1,{'bottom'},'HorizontalAlignment','center','VertpcalAlignment','top','fontsize',7)
+        % top
+        plot(offset+XLim_top,[0,0],'k','LineWidth',.5);
+        arrayfun(@(x) plot([x,x],[0,-.1],'k','LineWidth',.1),offset+XLim_top);
+        arrayfun(@(x,y) text(x+offset,-.5,sprintf('%1.1f',x),'VerticalAlignment','top','HorizontalAlignment','center','fontsize',7),XLim_top);
+        text(mean(offset+XLim_top),-1,{'top'},'HorizontalAlignment','center','VerticalAlignment','top','fontsize',7);
+        % bottom
+        plot(-offset+XLim_bottom,[0,0],'k','LineWidth',.5);
+        arrayfun(@(x) plot([x,x],[0,-.1],'k','LineWidth',.5),-offset+XLim_bottom);
+        arrayfun(@(x,y) text(-offset+x,-.2,sprintf('%1.1f',x),'VerticalAlignment','top','HorizontalAlignment','center','fontsize',7),XLim_bottom);
+        text(mean(-offset+XLim_bottom),-1,{'bottom'},'HorizontalAlignment','center','VerticalAlignment','top','fontsize',7);
         %
-
+        
         if ~mod(i,total_plots) | i==K
-        %legend('show','Location','northeastoutside')
-        p=p+1;
-        if ~exist(strcat(analysis_path))
-            mkdir(strcat(analysis_path))
-        end 
-
-        set(gcf,'PaperPosition',[.25 .25 8 6])
-        print(f,'-painters','-fillpage', '-dpdf', strcat(analysis_path,'/','ECoG_pca_',condition,'_num_components_',num2str(K),...
-        '_component_top_bottom_loading_',num2str(fix((i-1)/num_rows)+2),'_window_'...
-        ,sprintf('%1d-%1d',coeff*(min(word_win)-1),coeff*max(word_win)),'.pdf'));
-    end        
+            %legend('show','Location','northeastoutside')
+            p=p+1;
+            if ~exist(strcat(analysis_path))
+                mkdir(strcat(analysis_path));
+            end
+            if do_print==1
+                set(gcf,'PaperPosition',[.25 .25 8 6])
+                print(f,'-painters','-bestfit', '-dpdf', strcat(analysis_path,'/','ECoG_pca_',condition,'_num_components_',num2str(K),...
+                    '_component_top_bottom_loading_',num2str(fix((i-1)/num_rows)+2),'_window_'...
+                    ,sprintf('%1d-%1d',coeff*(min(word_win)-1),coeff*max(word_win)),'.pdf'));
+            end
+        end
     end
     
     

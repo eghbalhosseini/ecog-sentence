@@ -1,24 +1,178 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% STEP 0: prepare the workspace 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-clear all 
-close all 
+clear all
+close all
 data_path='/Users/eghbalhosseiniasl1/MyData/ecog-sentence';
-subject_id='AMC026';
+subject_id='AMC';
 d= dir([data_path,strcat('/**/',subject_id,'*_crunched.mat')]);
 fprintf(' %d .mat files were found \n', length(d));
-gamma_band_index=4;
-num_of_permutation=1000; 
-p_threshold=0.01;
+d_image= dir([data_path,strcat('/**/',subject_id,'*_brain.mat')]);
+
+%
+subject_ids=table2cell(unique(cell2table(cellfun(@(x) x(regexpi(x,'AMC')+[0:5]), {d.name},'UniformOutput',false)')));
+%
+
 save_path='/Users/eghbalhosseiniasl1/MyData/ECoG-sentence/crunched/';
+%
+if 1
+    fprintf('adding basic ecog tools to path \n');
+    addpath('~/MyCodes/basic-ecog-tools/');
+    addpath(genpath('~/MyCodes/ecog-sentence/'));
+    addpath(genpath('~/MyCodes/basic-ecog-tools/activeBrain'));
+    addpath(genpath('~/MyCodes/basic-ecog-tools/ecog-filters'));
+    addpath(genpath('~/MyCodes/basic-ecog-tools/mex'));
+end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%  STEP 1 Selection of language-responsive electrodes
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-trial_condition=[];
-trial_hilbert_ave=[];
-trial_gamma_ave=[];
+for k=1:length(subject_ids)-1
+   
+    subj_brain_mat=load(strcat(d_image(k).folder,'/',d_image(k).name));
+    d_sub=(find(~cellfun(@isempty,cellfun(@(x) strfind(x,subject_ids{k}),{d.name},'UniformOutput',false))));
+    pial.pos=subj_brain_mat.cortex.vert;
+    pial.tri=subj_brain_mat.cortex.tri;
+    ft_plot_mesh(pial);
+    lighting gouraud;
+    camlight;
+    elec.elecpos=subj_brain_mat.tala.trielectrodes;
+    elec.label=arrayfun(@num2str,[1:length(elec.elecpos)]','UniformOutput',false);
+    ft_plot_sens(elec);
+    % 
+    cfg = [];
+    cfg.method = 'cortexhull';
+    cfg.headshape = '/Users/eghbalhosseiniasl1/MyData/ECoG-tutorial/SubjectUCI29/freesurfer/surf/lh.pial';
+    cfg.fshome = '/Applications/freesurfer';
+    hull_lh = ft_prepare_mesh(cfg);
 % 
+    elec_acpc_fr = elec;
+    grids = elec.label;
+    for g = 1:numel(grids)
+    cfg = [];
+    cfg.channel = grids{g};
+    cfg.keepchannel = 'yes';
+    cfg.elec = elec_acpc_fr;
+    cfg.method = 'headshape';
+    cfg.headshape = hull_lh;
+    cfg.warp = 'dykstra2012';
+    cfg.feedback = 'yes';
+    elec_acpc_fr = ft_electroderealign(cfg);
+    end
+    
+    
+
+    for i=d_sub
+        subj=load(strcat(d(i).folder,'/',d(i).name));
+        subj_id=fieldnames(subj);
+        subj=subj.(subj_id{1});
+        data=subj.data;
+        info=subj.info;
+        % load brain mat
+        
+        if strcmp(electrode_group,'language');
+            language_electrode=info.language_responsive_electrodes_hilbert_odd;
+        elseif strcmp(electrode_group,'buildup');
+            language_electrode=info.ramp_electrodes_hilbert_odd;
+        end
+        language_electrode_num=find(language_electrode);
+        % step 1: extract electrodes with siginificant language response
+        sentence_trial_index=~cellfun(@isempty,cellfun(@ (x) strfind(x,'S'),info.word_type,'UniformOutput',false));
+        %%%%%%%%%%%%%%% sentence
+        hilbert_band_envelope=[];
+        sentences=[data{sentence_trial_index}];%
+        word_length=sentences(1).signal_range_downsample(1,2)-sentences(1).signal_range_downsample(1,1)+1;
+        % creat a cell with wordposition(row)*time in trial(column) structure
+        % hilbert mean (changlab)
+        hilbert_band_envelope=cellfun(@(x) x(1:8),{sentences.signal_hilbert_downsample_parsed},'UniformOutput',false);
+        hilbert_band_envelope=[hilbert_band_envelope{:,:}];
+        hilbert_band_envelope=cellfun(@transpose,hilbert_band_envelope,'UniformOutput',false);
+        % make a words positions*channel* trial tensor
+        hilbert_band_envelope_tensor=cell2mat(permute(hilbert_band_envelope,[1,3,2]));
+        %append to langauge_channel*trial*words positions
+        hilbert_band_envelope_tensor=permute(hilbert_band_envelope_tensor,[2,3,1]);
+        hilbert_band_envelope_tensor=hilbert_band_envelope_tensor(find(language_electrode),:,:);
+        
+        session_sentence_hilbert_band_envelope_tensor=cat(2,session_sentence_hilbert_band_envelope_tensor,hilbert_band_envelope_tensor);
+        % find sentence locations
+        example_sentence=cellfun(@(x) x(2:end),{sentences(:).trial_string},'UniformOutput',false);
+        session_sentence_examples=[session_sentence_examples;example_sentence'];
+        %%%%%%%%%%%%%%%%% words
+        hilbert_band_envelope=[];
+        words_trial_index=~cellfun(@isempty,cellfun(@ (x) strfind(x,'W'),info.word_type,'UniformOutput',false));
+        % words
+        words=[data{words_trial_index}];
+        hilbert_band_envelope=cellfun(@(x) x(1:8),{words.signal_hilbert_downsample_parsed},'UniformOutput',false);
+        % creat a cell with wordposition(row)*time in trial(column) structure
+        hilbert_band_envelope=[hilbert_band_envelope{:,:}];
+        hilbert_band_envelope=cellfun(@transpose,hilbert_band_envelope,'UniformOutput',false);
+        % make a words positions*channel* trial tensor
+        hilbert_band_envelope_tensor=cell2mat(permute(hilbert_band_envelope,[1,3,2]));
+        %append to langauge_channel*trial*words positions
+        hilbert_band_envelope_tensor=permute(hilbert_band_envelope_tensor,[2,3,1]);
+        hilbert_band_envelope_tensor=hilbert_band_envelope_tensor(find(language_electrode),:,:);
+        session_words_hilbert_band_envelope_tensor=cat(2,session_words_hilbert_band_envelope_tensor,hilbert_band_envelope_tensor);
+        %
+        example_words=cellfun(@(x) x(2:end),{words(:).trial_string},'UniformOutput',false);
+        session_wordlist_examples=[session_wordlist_examples;example_words'];
+        %%%%%%%%%%%%%%%%%%% nonwords
+        hilbert_band_envelope=[];
+        nonwords_trial_index=~cellfun(@isempty,cellfun(@ (x) strfind(x,'N'),info.word_type,'UniformOutput',false));
+        % nonwords
+        nonwords=[data{nonwords_trial_index}];
+        hilbert_band_envelope=cellfun(@(x) x(1:8),{nonwords.signal_hilbert_downsample_parsed},'UniformOutput',false);
+        % creat a cell with wordposition(row)*time in trial(column) structure
+        hilbert_band_envelope=[hilbert_band_envelope{:,:}];
+        hilbert_band_envelope=cellfun(@transpose,hilbert_band_envelope,'UniformOutput',false);
+        % make a nonwords positions*channel* trial tensor
+        hilbert_band_envelope_tensor=cell2mat(permute(hilbert_band_envelope,[1,3,2]));
+        %append to langauge_channel*trial*nonwords positions
+        hilbert_band_envelope_tensor=permute(hilbert_band_envelope_tensor,[2,3,1]);
+        hilbert_band_envelope_tensor=hilbert_band_envelope_tensor(find(language_electrode),:,:);
+        session_nonwords_hilbert_band_envelope_tensor=cat(2,session_nonwords_hilbert_band_envelope_tensor,hilbert_band_envelope_tensor);
+        %
+        example_nonwords=cellfun(@(x) x(2:end),{nonwords(:).trial_string},'UniformOutput',false);
+        session_nonwords_examples=[session_nonwords_examples;example_nonwords'];
+        %
+        hilbert_band_envelope=[];
+        jabberwocky_trial_index=~cellfun(@isempty,cellfun(@ (x) strfind(x,'J'),info.word_type,'UniformOutput',false));
+        % jabberwocky
+        jabberwocky=[data{jabberwocky_trial_index}];
+        hilbert_band_envelope=cellfun(@(x) x(1:8),{jabberwocky.signal_hilbert_downsample_parsed},'UniformOutput',false);
+        % creat a cell with wordposition(row)*time in trial(column) structure
+        hilbert_band_envelope=[hilbert_band_envelope{:,:}];
+        hilbert_band_envelope=cellfun(@transpose,hilbert_band_envelope,'UniformOutput',false);
+        % make a jabberwocky positions*channel* trial tensor
+        hilbert_band_envelope_tensor=cell2mat(permute(hilbert_band_envelope,[1,3,2]));
+        %append to langauge_channel*trial*jabberwocky positions
+        hilbert_band_envelope_tensor=permute(hilbert_band_envelope_tensor,[2,3,1]);
+        hilbert_band_envelope_tensor=hilbert_band_envelope_tensor(find(language_electrode),:,:);
+        session_jabberwocky_hilbert_band_envelope_tensor=cat(2,session_jabberwocky_hilbert_band_envelope_tensor,hilbert_band_envelope_tensor);
+        %
+        example_jabberwocky=cellfun(@(x) x(2:end),{jabberwocky(:).trial_string},'UniformOutput',false);
+        session_jabberwocky_examples=[session_jabberwocky_examples;example_jabberwocky'];
+        %
+        fprintf('added %s from %s \n',d(i).name, strcat(d(i).folder,'/',d(i).name));
+        clear data subj
+    end
+    sub.sub_id=subject_ids{k};
+    % signal
+    sub.sess_sentence_hilb_tensor=session_sentence_hilbert_band_envelope_tensor;
+    sub.sess_wordlist_hilb_tensor=session_words_hilbert_band_envelope_tensor;
+    sub.sess_nonwords_hilb_tensor=session_nonwords_hilbert_band_envelope_tensor;
+    sub.sess_jabberwocky_hilb_tensor=session_jabberwocky_hilbert_band_envelope_tensor;
+    % stimuli
+    sub.sess_sentence_stim=session_sentence_examples;
+    sub.sess_wordlist_stim=session_wordlist_examples;
+    sub.sess_nonwords_stim=session_nonwords_examples;
+    sub.sess_jabberwocky_stim=session_jabberwocky_examples;
+    sub.sess_stim_length=word_length;
+    all_sub_dat=[all_sub_dat;sub];
+    
+    
+    
+end
+%% 
 for k=1:2:length(d)
     %fprintf('adding %s from %s \n',d(k).name, strcat(d(k).folder,'/',d(k).name));
     subj=load(strcat(d(k).folder,'/',d(k).name));
@@ -27,7 +181,7 @@ for k=1:2:length(d)
     data=subj.data;
     info=subj.info;
     
-% step 1: compute mean across the word positions in each trial 
+    % step 1: compute mean across the word positions in each trial 
     %%%%%%%%%%%%%%%%%%% sentence 
     % convert the gamma into a tensor of shape : channel*trial*words
     sentence_trial_index=~cellfun(@isempty,cellfun(@ (x) strfind(x,'S'),info.word_type,'UniformOutput',false));    
@@ -117,7 +271,7 @@ clear all
 close all 
 data_path='/Users/eghbalhosseiniasl1/MyData/ecog-sentence';
 save_path='/Users/eghbalhosseiniasl1/MyData/ECoG-sentence/crunched/';
-subject_id='AMC026';
+subject_id='AMC044';
 d= dir([data_path,strcat('/**/',subject_id,'*_crunched.mat')]);
 fprintf(' %d .mat files were found \n', length(d));
 gamma_band_index=4;
@@ -162,16 +316,11 @@ for i=1:size(sentence_hilbert_lang_elec_tensor_accross_sessions,1)
     sentence_hilbert_correlations=[sentence_hilbert_correlations;[r_sentence,p_sent]];
 end 
 electrode_num=find(info.language_responsive_electrodes_hilbert_odd);
-try 
 hilbert_ramp_electrodes=electrode_num(sentence_hilbert_correlations(:,1)>0 & sentence_hilbert_correlations(:,2)<0.01);
-catch 
-    hilbert_ramp_electrodes=[];
-end 
 hilbert_channel_ramp=zeros(size(info.language_responsive_electrodes_hilbert_odd,1),1);
 hilbert_channel_ramp(hilbert_ramp_electrodes)=1;
 
 % 
-try
 sentence_gamma_correlations=[];
 for i=1:size(sentence_gamma_lang_elec_tensor_accross_sessions,1)
     channel_response=double(squeeze(sentence_gamma_lang_elec_tensor_accross_sessions(i,:,:)));
@@ -183,9 +332,6 @@ electrode_num=find(info.language_responsive_electrodes_gamma_odd);
 gamma_ramp_electrodes=electrode_num(sentence_gamma_correlations(:,1)>0 & sentence_gamma_correlations(:,2)<0.01);
 gamma_channel_ramp=zeros(size(info.language_responsive_electrodes_gamma_odd,1),1);
 gamma_channel_ramp(gamma_ramp_electrodes)=1;
-catch 
-    gamma_channel_ramp=hilbert_channel_ramp*0;
-end 
 % save it 
 for k=1:length(d)
     fprintf('adding ramp electrodes to %s \n', strcat(d(k).folder,'/',d(k).name));
@@ -211,7 +357,7 @@ close all
 data_path='/Users/eghbalhosseiniasl1/MyData/ecog-sentence';
 save_path='/Users/eghbalhosseiniasl1/MyData/ECoG-sentence/crunched/';
 analysis_path='/Users/eghbalhosseiniasl1/MyData/ecog-sentence/analysis/analysis_0_replicate_PNAS/';
-subject_id='AMC026';
+subject_id='AMC037';
 d= dir([data_path,strcat('/**/',subject_id,'*_crunched.mat')]);
 fprintf(' %d .mat files were found \n', length(d));
 gamma_band_index=4;
@@ -222,17 +368,12 @@ session_sentence_hilbert_band_ave_envelope_pre_trial_tensor=[];
 session_sentence_hilbert_band_envelope_tensor=[];
 session_sentence_hilbert_zs_band_envelope_tensor=[];
 session_sentence_hilbert_band_ave_envelope_tensor=[];
-
-session_sentence_hilbert_pca_zs_band_envelope_tensor=[];
-session_sentence_hilbert_pca_zs_band_envelope_pre_trial_tensor=[];
 % 
 session_words_hilbert_band_envelope_pre_trial_tensor=[];
 session_words_hilbert_zs_band_envelope_pre_trial_tensor=[];
-session_words_hilbert_pca_zs_band_envelope_pre_trial_tensor=[];
 session_words_hilbert_band_ave_envelope_pre_trial_tensor=[];
 session_words_hilbert_band_envelope_tensor=[];
 session_words_hilbert_zs_band_envelope_tensor=[];
-session_words_hilbert_pca_zs_band_envelope_tensor=[];
 session_words_hilbert_band_ave_envelope_tensor=[];
 % 
 session_nonwords_hilbert_band_envelope_pre_trial_tensor=[];
@@ -241,9 +382,6 @@ session_nonwords_hilbert_band_ave_envelope_pre_trial_tensor=[];
 session_nonwords_hilbert_band_envelope_tensor=[];
 session_nonwords_hilbert_zs_band_envelope_tensor=[];
 session_nonwords_hilbert_band_ave_envelope_tensor=[];
-session_nonwords_hilbert_pca_zs_band_envelope_tensor=[];
-session_nonwords_hilbert_pca_zs_band_envelope_pre_trial_tensor=[];
-
 % 
 session_jabberwocky_hilbert_band_envelope_pre_trial_tensor=[];
 session_jabberwocky_hilbert_zs_band_envelope_pre_trial_tensor=[];
@@ -251,9 +389,6 @@ session_jabberwocky_hilbert_band_ave_envelope_pre_trial_tensor=[];
 session_jabberwocky_hilbert_band_envelope_tensor=[];
 session_jabberwocky_hilbert_zs_band_envelope_tensor=[];
 session_jabberwocky_hilbert_band_ave_envelope_tensor=[];
-session_jabberwocky_hilbert_pca_zs_band_envelope_tensor=[];
-session_jabber_hilbert_pca_zs_band_envelope_pre_trial_tensor=[];
-
 % 
 for i=1:length(d)
     
@@ -280,12 +415,6 @@ for i=1:length(d)
     hilbert_zs_band_envelope=[hilbert_zs_band_envelope{:,:}];
     hilbert_zs_band_envelope_pre_trial=cellfun(@(x) reshape(x,size(x,1),1,size(x,2)),{sentences.signal_pre_trial_hilbert_zs_downsample},'UniformOutput',false);
     hilbert_zs_band_envelope_pre_trial=[hilbert_zs_band_envelope_pre_trial{:,:}];
-    try 
-        hilbert_pca_zs_band_envelope=cellfun(@(x) x(1:8),{sentences.signal_hilbert_pca_zs_downsample_parsed},'UniformOutput',false);
-        hilbert_pca_zs_band_envelope=[hilbert_pca_zs_band_envelope{:,:}];
-        hilbert_pca_zs_band_envelope_pre_trial=cellfun(@(x) reshape(x,size(x,1),1,size(x,2)),{sentences.signal_pre_trial_hilbert_pca_zs_downsample},'UniformOutput',false);
-        hilbert_pca_zs_band_envelope_pre_trial=[hilbert_pca_zs_band_envelope_pre_trial{:,:}];
-    end 
     %
     sentence_hilbert_band_ave_envelope_pre_trial_tensor=permute(hilbert_band_ave_envelope_pre_trial,[1,3,2]);
     sentence_hilbert_band_envelope_pre_trial_tensor=permute(hilbert_band_envelope_pre_trial,[1,3,2]);
@@ -293,10 +422,6 @@ for i=1:length(d)
     sentence_hilbert_band_envelope_tensor=cell2mat(permute(hilbert_band_envelope,[3,1,2]));
     sentence_hilbert_zs_band_envelope_pre_trial_tensor=permute(hilbert_zs_band_envelope_pre_trial,[1,3,2]);
     sentence_hilbert_zs_band_envelope_tensor=cell2mat(permute(hilbert_zs_band_envelope,[3,1,2]));
-    try 
-         sentence_hilbert_pca_zs_band_envelope_pre_trial_tensor=permute(hilbert_pca_zs_band_envelope_pre_trial,[1,3,2]);
-    sentence_hilbert_pca_zs_band_envelope_tensor=cell2mat(permute(hilbert_pca_zs_band_envelope,[3,1,2]));
-    end 
     %
     session_sentence_hilbert_band_envelope_pre_trial_tensor=cat(3,session_sentence_hilbert_band_envelope_pre_trial_tensor,sentence_hilbert_band_envelope_pre_trial_tensor);
     session_sentence_hilbert_band_ave_envelope_pre_trial_tensor=cat(3,session_sentence_hilbert_band_ave_envelope_pre_trial_tensor,sentence_hilbert_band_ave_envelope_pre_trial_tensor);
@@ -304,10 +429,6 @@ for i=1:length(d)
     session_sentence_hilbert_band_ave_envelope_tensor=cat(3,session_sentence_hilbert_band_ave_envelope_tensor,sentence_hilbert_band_ave_envelope_tensor);
     session_sentence_hilbert_zs_band_envelope_pre_trial_tensor=cat(3,session_sentence_hilbert_zs_band_envelope_pre_trial_tensor,sentence_hilbert_zs_band_envelope_pre_trial_tensor);
     session_sentence_hilbert_zs_band_envelope_tensor=cat(3,session_sentence_hilbert_zs_band_envelope_tensor,sentence_hilbert_zs_band_envelope_tensor);
-    try 
-        session_sentence_hilbert_pca_zs_band_envelope_pre_trial_tensor=cat(3,session_sentence_hilbert_pca_zs_band_envelope_pre_trial_tensor,sentence_hilbert_pca_zs_band_envelope_pre_trial_tensor);
-    session_sentence_hilbert_pca_zs_band_envelope_tensor=cat(3,session_sentence_hilbert_pca_zs_band_envelope_tensor,sentence_hilbert_pca_zs_band_envelope_tensor);
-    end 
     %%%%%%%%%%%%%%%%% words
     words_trial_index=~cellfun(@isempty,cellfun(@ (x) strfind(x,'W'),info.word_type,'UniformOutput',false));
     words=[data{words_trial_index}];
@@ -324,13 +445,6 @@ for i=1:length(d)
     hilbert_zs_band_envelope=[hilbert_zs_band_envelope{:,:}];
     hilbert_zs_band_envelope_pre_trial=cellfun(@(x) reshape(x,size(x,1),1,size(x,2)),{words.signal_pre_trial_hilbert_zs_downsample},'UniformOutput',false);
     hilbert_zs_band_envelope_pre_trial=[hilbert_zs_band_envelope_pre_trial{:,:}];
-    try
-        hilbert_pca_zs_band_envelope=cellfun(@(x) x(1:8),{words.signal_hilbert_pca_zs_downsample_parsed},'UniformOutput',false);
-        hilbert_pca_zs_band_envelope=[hilbert_pca_zs_band_envelope{:,:}];
-        hilbert_pca_zs_band_envelope_pre_trial=cellfun(@(x) reshape(x,size(x,1),1,size(x,2)),{words.signal_pre_trial_hilbert_pca_zs_downsample},'UniformOutput',false);
-        hilbert_pca_zs_band_envelope_pre_trial=[hilbert_pca_zs_band_envelope_pre_trial{:,:}];
-    end
- 
     %
     words_hilbert_band_ave_envelope_pre_trial_tensor=permute(hilbert_band_ave_envelope_pre_trial,[1,3,2]);
     words_hilbert_band_envelope_pre_trial_tensor=permute(hilbert_band_envelope_pre_trial,[1,3,2]);
@@ -338,10 +452,7 @@ for i=1:length(d)
     words_hilbert_band_envelope_tensor=cell2mat(permute(hilbert_band_envelope,[3,1,2]));
     words_hilbert_zs_band_envelope_pre_trial_tensor=permute(hilbert_zs_band_envelope_pre_trial,[1,3,2]);
     words_hilbert_zs_band_envelope_tensor=cell2mat(permute(hilbert_zs_band_envelope,[3,1,2]));
-    try
-        sentence_hilbert_pca_zs_band_envelope_pre_trial_tensor=permute(hilbert_pca_zs_band_envelope_pre_trial,[1,3,2]);
-        sentence_hilbert_pca_zs_band_envelope_tensor=cell2mat(permute(hilbert_pca_zs_band_envelope,[3,1,2]));
-    end
+    
     
     %
     session_words_hilbert_band_envelope_pre_trial_tensor=cat(3,session_words_hilbert_band_envelope_pre_trial_tensor,words_hilbert_band_envelope_pre_trial_tensor);
@@ -350,10 +461,7 @@ for i=1:length(d)
     session_words_hilbert_band_ave_envelope_tensor=cat(3,session_words_hilbert_band_ave_envelope_tensor,words_hilbert_band_ave_envelope_tensor);
     session_words_hilbert_zs_band_envelope_pre_trial_tensor=cat(3,session_words_hilbert_zs_band_envelope_pre_trial_tensor,words_hilbert_zs_band_envelope_pre_trial_tensor);
     session_words_hilbert_zs_band_envelope_tensor=cat(3,session_words_hilbert_zs_band_envelope_tensor,words_hilbert_zs_band_envelope_tensor);
-        try 
-        session_words_hilbert_pca_zs_band_envelope_pre_trial_tensor=cat(3,session_words_hilbert_pca_zs_band_envelope_pre_trial_tensor,sentence_hilbert_pca_zs_band_envelope_pre_trial_tensor);
-    session_words_hilbert_pca_zs_band_envelope_tensor=cat(3,session_words_hilbert_pca_zs_band_envelope_tensor,sentence_hilbert_pca_zs_band_envelope_tensor);
-    end 
+    
     %%%%%%%%%%%%%%%% nonwords
     nonwords_trial_index=~cellfun(@isempty,cellfun(@ (x) strfind(x,'N'),info.word_type,'UniformOutput',false));
     nonwords=[data{nonwords_trial_index}];
@@ -370,13 +478,6 @@ for i=1:length(d)
     hilbert_zs_band_envelope=[hilbert_zs_band_envelope{:,:}];
     hilbert_zs_band_envelope_pre_trial=cellfun(@(x) reshape(x,size(x,1),1,size(x,2)),{nonwords.signal_pre_trial_hilbert_zs_downsample},'UniformOutput',false);
     hilbert_zs_band_envelope_pre_trial=[hilbert_zs_band_envelope_pre_trial{:,:}];
-    try
-        hilbert_pca_zs_band_envelope=cellfun(@(x) x(1:8),{nonwords.signal_hilbert_pca_zs_downsample_parsed},'UniformOutput',false);
-        hilbert_pca_zs_band_envelope=[hilbert_pca_zs_band_envelope{:,:}];
-        hilbert_pca_zs_band_envelope_pre_trial=cellfun(@(x) reshape(x,size(x,1),1,size(x,2)),{nonwords.signal_pre_trial_hilbert_pca_zs_downsample},'UniformOutput',false);
-        hilbert_pca_zs_band_envelope_pre_trial=[hilbert_pca_zs_band_envelope_pre_trial{:,:}];
-    end
- 
     %
     nonwords_hilbert_band_ave_envelope_pre_trial_tensor=permute(hilbert_band_ave_envelope_pre_trial,[1,3,2]);
     nonwords_hilbert_band_envelope_pre_trial_tensor=permute(hilbert_band_envelope_pre_trial,[1,3,2]);
@@ -384,10 +485,7 @@ for i=1:length(d)
     nonwords_hilbert_band_envelope_tensor=cell2mat(permute(hilbert_band_envelope,[3,1,2]));
     nonwords_hilbert_zs_band_envelope_pre_trial_tensor=permute(hilbert_zs_band_envelope_pre_trial,[1,3,2]);
     nonwords_hilbert_zs_band_envelope_tensor=cell2mat(permute(hilbert_zs_band_envelope,[3,1,2]));
-      try
-        nonwords_hilbert_pca_zs_band_envelope_pre_trial_tensor=permute(hilbert_pca_zs_band_envelope_pre_trial,[1,3,2]);
-        nonwords_hilbert_pca_zs_band_envelope_tensor=cell2mat(permute(hilbert_pca_zs_band_envelope,[3,1,2]));
-    end
+    
     %
     session_nonwords_hilbert_band_envelope_pre_trial_tensor=cat(3,session_nonwords_hilbert_band_envelope_pre_trial_tensor,nonwords_hilbert_band_envelope_pre_trial_tensor);
     session_nonwords_hilbert_band_ave_envelope_pre_trial_tensor=cat(3,session_nonwords_hilbert_band_ave_envelope_pre_trial_tensor,nonwords_hilbert_band_ave_envelope_pre_trial_tensor);
@@ -396,11 +494,6 @@ for i=1:length(d)
     
     session_nonwords_hilbert_zs_band_envelope_pre_trial_tensor=cat(3,session_nonwords_hilbert_zs_band_envelope_pre_trial_tensor,nonwords_hilbert_zs_band_envelope_pre_trial_tensor);
     session_nonwords_hilbert_zs_band_envelope_tensor=cat(3,session_nonwords_hilbert_zs_band_envelope_tensor,nonwords_hilbert_zs_band_envelope_tensor);
-    try
-        session_nonwords_hilbert_pca_zs_band_envelope_pre_trial_tensor=cat(3,session_nonwords_hilbert_pca_zs_band_envelope_pre_trial_tensor,sentence_hilbert_pca_zs_band_envelope_pre_trial_tensor);
-        session_nonwords_hilbert_pca_zs_band_envelope_tensor=cat(3,session_nonwords_hilbert_pca_zs_band_envelope_tensor,sentence_hilbert_pca_zs_band_envelope_tensor);
-    end
-    
     %%%%%%%%%%%%%%% jabberwocky
     jabberwocky_trial_index=~cellfun(@isempty,cellfun(@ (x) strfind(x,'J'),info.word_type,'UniformOutput',false));
     jabberwocky=[data{jabberwocky_trial_index}];
@@ -417,13 +510,6 @@ for i=1:length(d)
     hilbert_zs_band_envelope=[hilbert_zs_band_envelope{:,:}];
     hilbert_zs_band_envelope_pre_trial=cellfun(@(x) reshape(x,size(x,1),1,size(x,2)),{jabberwocky.signal_pre_trial_hilbert_zs_downsample},'UniformOutput',false);
     hilbert_zs_band_envelope_pre_trial=[hilbert_zs_band_envelope_pre_trial{:,:}];
-    try
-        hilbert_pca_zs_band_envelope=cellfun(@(x) x(1:8),{jabberwocky.signal_hilbert_pca_zs_downsample_parsed},'UniformOutput',false);
-        hilbert_pca_zs_band_envelope=[hilbert_pca_zs_band_envelope{:,:}];
-        hilbert_pca_zs_band_envelope_pre_trial=cellfun(@(x) reshape(x,size(x,1),1,size(x,2)),{jabberwocky.signal_pre_trial_hilbert_pca_zs_downsample},'UniformOutput',false);
-        hilbert_pca_zs_band_envelope_pre_trial=[hilbert_pca_zs_band_envelope_pre_trial{:,:}];
-    end
- 
     %
     jabberwocky_hilbert_band_ave_envelope_pre_trial_tensor=permute(hilbert_band_ave_envelope_pre_trial,[1,3,2]);
     jabberwocky_hilbert_band_envelope_pre_trial_tensor=permute(hilbert_band_envelope_pre_trial,[1,3,2]);
@@ -431,10 +517,7 @@ for i=1:length(d)
     jabberwocky_hilbert_band_envelope_tensor=cell2mat(permute(hilbert_band_envelope,[3,1,2]));
     jabberwocky_hilbert_zs_band_envelope_pre_trial_tensor=permute(hilbert_zs_band_envelope_pre_trial,[1,3,2]);
     jabberwocky_hilbert_zs_band_envelope_tensor=cell2mat(permute(hilbert_zs_band_envelope,[3,1,2]));
-    try
-        jabberwocky_hilbert_pca_zs_band_envelope_pre_trial_tensor=permute(hilbert_pca_zs_band_envelope_pre_trial,[1,3,2]);
-        jabberwocky_hilbert_pca_zs_band_envelope_tensor=cell2mat(permute(hilbert_pca_zs_band_envelope,[3,1,2]));
-    end
+    
     %
     session_jabberwocky_hilbert_band_envelope_pre_trial_tensor=cat(3,session_jabberwocky_hilbert_band_envelope_pre_trial_tensor,jabberwocky_hilbert_band_envelope_pre_trial_tensor);
     session_jabberwocky_hilbert_band_ave_envelope_pre_trial_tensor=cat(3,session_jabberwocky_hilbert_band_ave_envelope_pre_trial_tensor,jabberwocky_hilbert_band_ave_envelope_pre_trial_tensor);
@@ -443,10 +526,7 @@ for i=1:length(d)
     session_jabberwocky_hilbert_zs_band_envelope_pre_trial_tensor=cat(3,session_jabberwocky_hilbert_zs_band_envelope_pre_trial_tensor,jabberwocky_hilbert_zs_band_envelope_pre_trial_tensor);
     session_jabberwocky_hilbert_zs_band_envelope_tensor=cat(3,session_jabberwocky_hilbert_zs_band_envelope_tensor,jabberwocky_hilbert_zs_band_envelope_tensor);
     
-    try
-        session_jabber_hilbert_pca_zs_band_envelope_pre_trial_tensor=cat(3,session_jabber_hilbert_pca_zs_band_envelope_pre_trial_tensor,sentence_hilbert_pca_zs_band_envelope_pre_trial_tensor);
-        session_jabberwocky_hilbert_pca_zs_band_envelope_tensor=cat(3,session_jabberwocky_hilbert_pca_zs_band_envelope_tensor,sentence_hilbert_pca_zs_band_envelope_tensor);
-    end
+    
     clear subj data
     
 end 
@@ -592,220 +672,4 @@ g.draw();
 g.export('file_name',strcat(info.subject,'_figure_1_zs_timecourse_all_sessions'),'export_path',strcat(analysis_path,info.subject),'file_type','png');
 g.delete()
 close(gcf)
-
-% try plotting pca 
-try
-    S=double(mean(session_sentence_hilbert_pca_zs_band_envelope_tensor(find(info.ramp_electrodes_gamma_odd),:,:),3));
-    S_prestim=double(mean(session_sentence_hilbert_pca_zs_band_envelope_pre_trial_tensor(find(info.ramp_electrodes_gamma_odd),:,:),3));
-    S_all=[S_prestim,S];
-    %
-    W=double(mean(session_words_hilbert_pca_zs_band_envelope_tensor(find(info.ramp_electrodes_gamma_odd),:,:),3));
-    W_prestim=double(mean(session_words_hilbert_pca_zs_band_envelope_pre_trial_tensor(find(info.ramp_electrodes_gamma_odd),:,:),3));
-    W_all=[W_prestim,W];
-    %
-    N=double(mean(session_nonwords_hilbert_pca_zs_band_envelope_tensor(find(info.ramp_electrodes_gamma_odd),:,:),3));
-    N_prestim=double(mean(session_nonwords_hilbert_pca_zs_band_envelope_pre_trial_tensor(find(info.ramp_electrodes_gamma_odd),:,:),3));
-    N_all=[N_prestim,N];
-    %
-    J=double(mean(session_jabberwocky_hilbert_pca_zs_band_envelope_tensor(find(info.ramp_electrodes_gamma_odd),:,:),3));
-    J_prestim=double(mean(session_jabber_hilbert_pca_zs_band_envelope_pre_trial_tensor(find(info.ramp_electrodes_gamma_odd),:,:),3));
-    J_all=[J_prestim,J];
-    
-    C={'S','W','N','J'};
-    c_index=[ones(1,size(S,1)),2*ones(1,size(S,1)),3*ones(1,size(S,1)),4*ones(1,size(S,1))];
-    c=C(c_index);
-    
-    x=[-size(S_prestim,2)+1:size(S,2)];
-    y=[S_all;W_all;N_all;J_all];
-   
-    clear g ans
-    g=gramm('x',x,'y',y,'color',c);
-    %g.set_color_options('map','d3_20b','n_color',4);
-    
-    %g.set_order_options('color',[1,2]);
-    g.stat_summary('type','sem','setylim',true);
-    g.geom_hline();
-    g.set_title({info.subject,'mean activity across all channels '});
-    g.axe_property('Xtick',[-size(N_prestim,2)+1,0:135:7*(135)]);
-    g.axe_property('Xticklabel',['pre stim',strsplit(num2str([1:8]),' ')]);
-    %g.axe_property('ylim',y_lim);
-    
-    g.set_names('x','word number','y','z-score','color','mean and sem');
-    
-    
-    figure('Position',[100 100 800 550]);
-    g.draw();
-    g.export('file_name',strcat(info.subject,'_figure_1_pca_zs_timecourse_all_sessions'),'export_path',strcat(analysis_path,info.subject),'file_type','png');
-    g.delete();
-    close(gcf)
-end
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%  STEP 3 Plot signals per electrode per condition for all 4 conditions 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
- 
-
-clear all 
-close all 
-data_path='/Users/eghbalhosseiniasl1/MyData/ecog-sentence';
-save_path='/Users/eghbalhosseiniasl1/MyData/ECoG-sentence/crunched/';
-analysis_path='/Users/eghbalhosseiniasl1/MyData/ecog-sentence/analysis/analysis_0_replicate_PNAS/';
-subject_id='AMC026';
-d= dir([data_path,strcat('/**/',subject_id,'*_crunched.mat')]);
-fprintf(' %d .mat files were found \n', length(d));
-gamma_band_index=4;
-% 
-session_sentence_hilbert_band_envelope_pre_trial_tensor=[];
-session_sentence_hilbert_band_envelope_tensor=[];
-% 
-session_words_hilbert_band_envelope_pre_trial_tensor=[];
-session_words_hilbert_band_envelope_tensor=[];
-% 
-session_nonwords_hilbert_band_envelope_pre_trial_tensor=[];
-session_nonwords_hilbert_band_envelope_tensor=[];
-% 
-session_jabberwocky_hilbert_band_envelope_pre_trial_tensor=[];
-session_jabberwocky_hilbert_band_envelope_tensor=[];
-% 
-for i=1:length(d)
-    
-    fprintf('adding %s from %s \n',d(i).name, strcat(d(i).folder,'/',d(i).name));
-    subj=load(strcat(d(i).folder,'/',d(i).name));
-    subj_id=fieldnames(subj);
-    subj=subj.(subj_id{1});
-    data=subj.data;
-    info=subj.info;
-    language_electrode=info.language_responsive_electrodes_hilbert_odd;
-    language_electrode_num=find(language_electrode);
-    % step 1: extract electrodes with siginificant language response
-    %%%%%%%%%%%%%%%%% sentence
-    sentence_trial_index=~cellfun(@isempty,cellfun(@ (x) strfind(x,'S'),info.word_type,'UniformOutput',false));
-    sentences=[data{sentence_trial_index}];
-    word_length=sentences(1).signal_range_downsample(1,2)-sentences(1).signal_range_downsample(1,1)+1;
-    %
-    hilbert_band_envelope=cellfun(@(x) x(1:10),{sentences.signal_hilbert_downsample_parsed},'UniformOutput',false);
-    hilbert_band_envelope=[hilbert_band_envelope{:,:}];
-
-    hilbert_band_envelope=cellfun(@transpose,hilbert_band_envelope,'UniformOutput',false);
-    hilbert_band_envelope_tensor=cell2mat(permute(hilbert_band_envelope,[1,3,2])); 
-    hilbert_band_envelope_tensor=permute(hilbert_band_envelope_tensor,[2,3,1]); 
-    hilbert_band_envelope_pre_trial=cellfun(@(x) reshape(x,size(x,1),1,size(x,2)),{sentences.signal_pre_trial_hilbert_downsample},'UniformOutput',false);
-    hilbert_band_envelope_pre_trial_tensor=[hilbert_band_envelope_pre_trial{:,:}];
-    session_sentence_hilbert_band_envelope_pre_trial_tensor=cat(2,session_sentence_hilbert_band_envelope_pre_trial_tensor,hilbert_band_envelope_pre_trial_tensor(find(language_electrode),:,:));
-    session_sentence_hilbert_band_envelope_tensor=cat(2,session_sentence_hilbert_band_envelope_tensor,hilbert_band_envelope_tensor(find(language_electrode),:,:));
-    %%%%%%%%%%%%%%%%% words
-    words_trial_index=~cellfun(@isempty,cellfun(@ (x) strfind(x,'W'),info.word_type,'UniformOutput',false));
-    words=[data{words_trial_index}];
-    %
-    hilbert_band_envelope=cellfun(@(x) x(1:10),{words.signal_hilbert_downsample_parsed},'UniformOutput',false);
-    hilbert_band_envelope=[hilbert_band_envelope{:,:}];
-    hilbert_band_envelope=cellfun(@transpose,hilbert_band_envelope,'UniformOutput',false);
-    hilbert_band_envelope_tensor=cell2mat(permute(hilbert_band_envelope,[1,3,2])); 
-    hilbert_band_envelope_tensor=permute(hilbert_band_envelope_tensor,[2,3,1]); 
-    hilbert_band_envelope_pre_trial=cellfun(@(x) reshape(x,size(x,1),1,size(x,2)),{words.signal_pre_trial_hilbert_downsample},'UniformOutput',false);
-    hilbert_band_envelope_pre_trial_tensor=[hilbert_band_envelope_pre_trial{:,:}];
-    session_words_hilbert_band_envelope_pre_trial_tensor=cat(2,session_words_hilbert_band_envelope_pre_trial_tensor,hilbert_band_envelope_pre_trial_tensor(find(language_electrode),:,:));
-    session_words_hilbert_band_envelope_tensor=cat(2,session_words_hilbert_band_envelope_tensor,hilbert_band_envelope_tensor(find(language_electrode),:,:));
-    %%%%%%%%%%%%%%%% nonwords
-    nonwords_trial_index=~cellfun(@isempty,cellfun(@ (x) strfind(x,'N'),info.word_type,'UniformOutput',false));
-    nonwords=[data{nonwords_trial_index}];
-    %
-    hilbert_band_envelope=cellfun(@(x) x(1:10),{nonwords.signal_hilbert_downsample_parsed},'UniformOutput',false);
-    hilbert_band_envelope=[hilbert_band_envelope{:,:}];
-    hilbert_band_envelope=cellfun(@transpose,hilbert_band_envelope,'UniformOutput',false);
-    hilbert_band_envelope_tensor=cell2mat(permute(hilbert_band_envelope,[1,3,2])); 
-    hilbert_band_envelope_tensor=permute(hilbert_band_envelope_tensor,[2,3,1]); 
-    hilbert_band_envelope_pre_trial=cellfun(@(x) reshape(x,size(x,1),1,size(x,2)),{nonwords.signal_pre_trial_hilbert_downsample},'UniformOutput',false);
-    hilbert_band_envelope_pre_trial_tensor=[hilbert_band_envelope_pre_trial{:,:}];
-    session_nonwords_hilbert_band_envelope_pre_trial_tensor=cat(2,session_nonwords_hilbert_band_envelope_pre_trial_tensor,hilbert_band_envelope_pre_trial_tensor(find(language_electrode),:,:));
-    session_nonwords_hilbert_band_envelope_tensor=cat(2,session_nonwords_hilbert_band_envelope_tensor,hilbert_band_envelope_tensor(find(language_electrode),:,:));
-    %%%%%%%%%%%%%%% jabberwocky
-    jabberwocky_trial_index=~cellfun(@isempty,cellfun(@ (x) strfind(x,'J'),info.word_type,'UniformOutput',false));
-    jabberwocky=[data{jabberwocky_trial_index}];
-    %
-    hilbert_band_envelope=cellfun(@(x) x(1:10),{jabberwocky.signal_hilbert_downsample_parsed},'UniformOutput',false);
-    hilbert_band_envelope=[hilbert_band_envelope{:,:}];
-    hilbert_band_envelope=cellfun(@transpose,hilbert_band_envelope,'UniformOutput',false);
-    hilbert_band_envelope_tensor=cell2mat(permute(hilbert_band_envelope,[1,3,2])); 
-    hilbert_band_envelope_tensor=permute(hilbert_band_envelope_tensor,[2,3,1]); 
-    hilbert_band_envelope_pre_trial=cellfun(@(x) reshape(x,size(x,1),1,size(x,2)),{jabberwocky.signal_pre_trial_hilbert_downsample},'UniformOutput',false);
-    hilbert_band_envelope_pre_trial_tensor=[hilbert_band_envelope_pre_trial{:,:}];
-    session_jabberwocky_hilbert_band_envelope_pre_trial_tensor=cat(2,session_jabberwocky_hilbert_band_envelope_pre_trial_tensor,hilbert_band_envelope_pre_trial_tensor(find(language_electrode),:,:));
-    session_jabberwocky_hilbert_band_envelope_tensor=cat(2,session_jabberwocky_hilbert_band_envelope_tensor,hilbert_band_envelope_tensor(find(language_electrode),:,:));
-    clear subj data
-    
-end 
-%% 
-close all 
-num_rows=5;
-num_columns=2;
-total_plots=num_rows*num_columns;
-p=0;
-colors=flipud(cbrewer('qual','Set1',5));
-for i=1:length(language_electrode_num)
-    % extract sentences 
-    electrode_sentence_pre_trial_response=double(squeeze(session_sentence_hilbert_band_envelope_pre_trial_tensor(i,:,:)));
-    electrode_sentence_response=double(squeeze(session_sentence_hilbert_band_envelope_tensor(i,:,:)));
-    electrode_nonwords_pre_trial_response=double(squeeze(session_nonwords_hilbert_band_envelope_pre_trial_tensor(i,:,:)));
-    electrode_nonwords_response=double(squeeze(session_nonwords_hilbert_band_envelope_tensor(i,:,:)));
-    electrode_words_pre_trial_response=double(squeeze(session_words_hilbert_band_envelope_pre_trial_tensor(i,:,:)));
-    electrode_words_response=double(squeeze(session_words_hilbert_band_envelope_tensor(i,:,:)));
-    electrode_jabber_pre_trial_response=double(squeeze(session_jabberwocky_hilbert_band_envelope_pre_trial_tensor(i,:,:)));
-    electrode_jabber_response=double(squeeze(session_jabberwocky_hilbert_band_envelope_tensor(i,:,:)));
-    % sentence
-    % 
-    figure(fix((i-1)/total_plots)+1);
-    set(gcf,'position',[ 1442,-129,1068,1269])
-    sub_title=sprintf('subj: %s,\n electrodes: %d ', info.subject ,language_electrode_num(i));
-    ax=subplot(num_rows,num_columns,i-total_plots*fix((i-1)/total_plots));
-    % 
-    x=[-size(electrode_sentence_pre_trial_response,2)+1:0,1:size(electrode_sentence_response,2)];
-    y=[nanmean(electrode_sentence_pre_trial_response,1),nanmean(electrode_sentence_response,1)];
-    z=[nanstd(electrode_sentence_pre_trial_response,[],1),nanstd(electrode_sentence_response,[],1)]./sqrt(size(electrode_sentence_response,1));
-    bl = boundedline(x, y, z, 'cmap', colors(1,:),'alpha');
-    bl.LineWidth=2;
-    hold on 
-    bl.DisplayName='sentences';
-    % 
-    x=[-size(electrode_nonwords_pre_trial_response,2)+1:0,1:size(electrode_nonwords_response,2)];
-    y=[nanmean(electrode_nonwords_pre_trial_response,1),nanmean(electrode_nonwords_response,1)];
-    z=[nanstd(electrode_nonwords_pre_trial_response,[],1),nanstd(electrode_nonwords_response,[],1)]./sqrt(size(electrode_nonwords_response,1));
-    bl = boundedline(x, y, z, 'cmap', colors(2,:),'alpha');
-    bl.LineWidth=2;
-    bl.DisplayName='Nonwords';
-    % 
-    x=[-size(electrode_words_pre_trial_response,2)+1:0,1:size(electrode_words_response,2)];
-    y=[nanmean(electrode_words_pre_trial_response,1),nanmean(electrode_words_response,1)];
-    z=[nanstd(electrode_words_pre_trial_response,[],1),nanstd(electrode_words_response,[],1)]./sqrt(size(electrode_words_response,1));
-    bl = boundedline(x, y, z, 'cmap', colors(3,:),'alpha');
-    bl.LineWidth=2;
-    bl.DisplayName='words';
-    % 
-    x=[-size(electrode_jabber_pre_trial_response,2)+1:0,1:size(electrode_jabber_response,2)];
-    y=[nanmean(electrode_jabber_pre_trial_response,1),nanmean(electrode_jabber_response,1)];
-    z=[nanstd(electrode_jabber_pre_trial_response,[],1),nanstd(electrode_jabber_response,[],1)]./sqrt(size(electrode_jabber_response,1));
-    bl = boundedline(x, y, z, 'cmap', colors(4,:),'alpha');
-    bl.LineWidth=2;
-    bl.DisplayName='jabberwocky';
-    axis tight
-    e1=arrayfun(@(x,y) plot([x,x],get(gca,'ylim'),'k--'),[0:word_length:8*word_length]);
-    hAnnotation=arrayfun(@(x) get(x,'Annotation'),e1);hLegendEntry = arrayfun(@(x) get(x,'LegendInformation'),hAnnotation);arrayfun(@(x) set(x,'IconDisplayStyle','off'),hLegendEntry);
-   
-    % nonwords 
-   
-    % 
-    ax.XAxis.Visible = 'on'; 
-    set(ax,'ydir', 'normal','box','off');
-    title(sub_title);
-    if ~mod(i,total_plots) | i==length(language_electrode_num)
-        legend('show','position',[.92,.1,.07,.05])
-        p=p+1;
-        if ~exist(strcat(analysis_path,info.subject))
-            mkdir(strcat(analysis_path,info.subject))
-        end 
-        
-        print(gcf, '-depsc', strcat(analysis_path,info.subject,'/',info.subject,'_SWJN_response_pre_post',num2str(p),'.eps')); 
-    end 
-    
-end
-%% plot only sentences 
 

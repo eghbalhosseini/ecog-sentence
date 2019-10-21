@@ -1,4 +1,4 @@
-function [R, W] = nonparametric_ica(X, K, N_RANDOM_INITS, PLOT_FIGURES, RAND_SEED, mus_id, si)
+function [R, W,explained_variance_ica] = nonparametric_ica(X, K, N_RANDOM_INITS, PLOT_FIGURES, RAND_SEED, mus_id, si)
 
 % [R, W] = nonparametric_ica(X, K, N_RANDOM_INITS, PLOT_FIGURES, RAND_SEED)
 % 
@@ -115,13 +115,13 @@ end
 %[U,S,V] = svd(X,'econ');
 Rpca = U(:,1:K) * S(1:K,1:K);
 Wpca = V(:,1:K)';
-
+explained_variance_pca=var(Rpca)./sum(var(X_zero_mean_rows))*100;
 % rotate PCA component weights to maximize negentropy
 W = maximize_negentropy_via_rotation(Wpca, N_RANDOM_INITS, RAND_SEED, PLOT_FIGURES);
 
 % estimate the response profiles from data matrix and inferred weights
 R = X_zero_mean_rows*pinv(W);
-
+explained_variance_ica=var(R)./sum(var(X_zero_mean_rows))*100;
 % normalize response profiles to have unit RMS
 for i = 1:K
     R(:,i) = R(:,i)/sqrt(mean(R(:,i).^2));

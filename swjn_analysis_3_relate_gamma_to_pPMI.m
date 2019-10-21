@@ -148,7 +148,10 @@ for kk=1:size(all_pmi_pattern,1)
     all_next_word_pmi=[all_next_word_pmi;next_word_pmi];
 end 
 
-%% plot average for pre-post in word closing 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%  regression for word position and pmi 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 close all 
 look_out_window=100; %200 ms
 offset=30; % 100 ms
@@ -203,8 +206,11 @@ for i=1:length(language_electrode_num)
     end 
     
 end
-%% 
-%% plot average for pre-post in word closing full post word window
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%  regression for word position and pmi 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
 close all 
 look_out_window=100; %200 ms
 offset=30; % 100 ms
@@ -260,6 +266,100 @@ for i=1:length(language_electrode_num)
     
 end
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%  create a schematic of analysis pipline  
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+close all 
+look_out_window=100; %200 ms
+offset=30; % 100 ms
+word_range=[1:8];
+num_rows=5;
+num_columns=2;
+total_plots=num_rows*num_columns;
+p=0;
+for i=1%:%length(language_electrode_num)
+    elec_response_to_next_word_pattern=[];
+    electrode_response=squeeze(session_sentence_hilbert_band_envelope_lang_elec_tensor(i,:,:));
+    electrode_response_sentence_cell=mat2cell(electrode_response,ones(1,size(electrode_response,1)),size(electrode_response,2)/8*ones(1,8));
+    electrode_1st_sent_cell=[electrode_response_sentence_cell(1,:)];
+    a=cell2mat(cellfun(@(x)  nanmean(x),electrode_1st_sent_cell,'UniformOutput',false));
+    b=ones(size(a,2));
+    [row,col]=find(b);
+    a_all_diffs=arrayfun(@(x,y) a(y)-a(x),row,col);
+    a_all_diffs_upper=triu(reshape(a_all_diffs,size(a,2),[]),1);
+    wordpos_all_diffs=arrayfun(@(x,y) y-x,row,col);
+    wordpos_all_diffs_upper=triu(reshape(wordpos_all_diffs,size(a,2),[]),1);
+    [row_p,col_p]=find(wordpos_all_diffs_upper);
+    
+    f=figure;
+    set(f,'position',[1341 334 960 783])
+    ax=axes('position',[.1,.1,.3,.3])
+    hold on 
+    ax.XLim=[0,9];
+    ax.YLim=[0,9];
+    arrayfun(@(x,y,z) text(x,y,num2str(wordpos_all_diffs_upper(x,y))),row_p,col_p);
+   
+    ax.XAxis.Direction='reverse';
+    
+    text(ax.XLim(2),ax.XLim(2)+1,'B','HorizontalAlignment','right','FontSize',12,'FontWeight','bold')
+    daspect([1,1,1])
+    ax.XTick=[1:8];ax.XTickLabelRotation=90;
+    ax.XTickLabel=fliplr(strsplit(all_sentence_pattern{1}));
+    ax.YTick=[1:8];ax.YTickLabelRotation=0;
+    ax.YTickLabel=fliplr(strsplit(all_sentence_pattern{1}));
+    ax.Title.String='Word Position';
+    
+    ax=axes('position',[.1,.6,.3,.3])
+    hold on 
+    ax.XLim=[0,9];
+    ax.YLim=[0,9];
+    pmi_sent=pmi_cell{all_sentence_pattern_id(1),2};
+    arrayfun(@(x,y,z) text(y,x,num2str(pmi_sent(x,y),'%1.1f')),row_p,col_p);
+    ax.YAxis.Direction='reverse';
+    ax.XAxis.Direction='normal';
+    daspect([1,1,1])
+    ax.XTick=[1:8];ax.XTickLabelRotation=90;
+    ax.XTickLabel=(strsplit(all_sentence_pattern{1}));
+    ax.YTick=[1:8];ax.YTickLabelRotation=0;
+    ax.YTickLabel=(strsplit(all_sentence_pattern{1}));
+    ax.Title.String='Pointwise Mutual Info';
+    text(ax.XLim(1),ax.XLim(1)-1,'A','HorizontalAlignment','right','FontSize',12,'FontWeight','bold')
+    % 
+    ax=axes('position',[.5,.3,.3,.3]);
+    hold on 
+    ax.XLim=[0,9];
+    ax.YLim=[0,9];
+   
+    arrayfun(@(x,y,z) text(y,x,num2str(a_all_diffs_upper(x,y),'%1.1f'),'horizontalalignment','center'),row_p,col_p);
+    ax.YAxis.Direction='reverse';
+    ax.XAxis.Direction='normal';
+   daspect([1,1,1])
+    fliplr(strsplit(all_sentence_pattern{1}))
+    ax.XTick=[1:8];ax.XTickLabelRotation=90;
+    ax.XTickLabel=(strsplit(all_sentence_pattern{1}));
+    ax.YTick=[1:8];ax.YTickLabelRotation=0;
+    ax.YTickLabel=(strsplit(all_sentence_pattern{1}));
+     ax.Title.String={'Change in',' gamma power'};
+    text(ax.XLim(1),ax.XLim(1)-1,'C','HorizontalAlignment','right','FontSize',12,'FontWeight','bold')
+    ax=axes('position',[.82,.3,.1,.3]);
+    p=plot(a,[1:8],'Marker','.','color','k');
+    p.MarkerSize=20;
+    p.LineWidth=2
+    ax.YLim=[0,9];
+    ax.XLim=1.2*[min(a),max(a)];
+    ax.XAxis.Direction='normal';
+    ax.YAxis.Direction='reverse';
+    ax.YAxis.Visible='off'
+    ax.Box='off'
+    ax.Title.String=' gamma power';
+
+        if ~exist(strcat(analysis_path,info.subject))
+            mkdir(strcat(analysis_path,info.subject))
+        end 
+        set(gcf,'PaperPosition',[.25 .25 8 6])
+        print(gcf, '-djpeg', strcat(analysis_path,info.subject,'/',info.subject,'_representitive_fig')); 
+    
+end
 
 
