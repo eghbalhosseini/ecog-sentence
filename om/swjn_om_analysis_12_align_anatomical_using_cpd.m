@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% STEP 0: prepare the workspace 
+%% STEP 0: prepare the workspace
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 clear all
 close all
@@ -15,7 +15,7 @@ if 1
     %addpath(genpath('~/MyCodes/basic-ecog-tools/mex'));
 end
 
-%% 
+%%
 subject_id='AMC026';
 root_dir='/mindhive/evlab/u/Shared/ECoG/SUBJECTS/';
 template_child_dir='/IMAGING/alignment/';
@@ -27,12 +27,12 @@ template_lr = load(template_path);
 % template=template_lr.cortex;
 template.pos=template_lr.cortex.vert;
 template.tri=template_lr.cortex.tri;
-% 
+%
 sub_brain=load(headshape_path);
 headshape.pos=sub_brain.cortex.vert;
 headshape.tri=sub_brain.cortex.tri;
 
-% cpd setting 
+% cpd setting
 opt.method='affine'; % use nonrigid registration
 opt.beta=2;            % the width of Gaussian kernel (smoothness)
 opt.lambda=3;          % regularization weight
@@ -54,5 +54,3 @@ transform.M=M;
 save_path=strcat([root_dir,subject_id,template_child_dir,opt.method,'_iter_',num2str(opt.max_it),'_transform.mat']);
 save(save_path,'transform');
 fprintf('finished tranformation \n');
-
-
