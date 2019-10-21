@@ -3,7 +3,7 @@
 #  om_run_swjn_analysis_12.sh
 #SBATCH --job-name=om_run_swjn_analysis_12
 #SBATCH -t 1:00:00
-#SBATCH --ntask=1
+#SBATCH --ntasks=1
 #SBATCH --array=1
 #SBATCH --mem-per-cpu 10000
 #SBATCH --exclude node017,node018
