@@ -50,7 +50,7 @@ M = eye(4,4);
 M(1:3,1:3) = transform.R;
 M(1:3,4)   = transform.t;
 transform.M=M;
-% save transformation;
+% save transfo
 save_path=strcat([root_dir,subject_id,child_dir,opt.method,'_iter_',num2str(opt.max_it),'_transform.mat']);
 save(save_path,'transform');
 fprintf('finished tranformation \n');
