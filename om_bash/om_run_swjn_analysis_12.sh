@@ -4,9 +4,9 @@
 #SBATCH --job-name=om_run_swjn_analysis_12
 #SBATCH -t 20:00:00
 #SBATCH --ntasks=1
-#SBATCH -c 8
+#SBATCH -c 32
 #SBATCH --array=1
-#SBATCH --mem-per-cpu 5000
+#SBATCH --mem-per-cpu 1000
 #SBATCH --exclude node017,node018
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=ehoseini@mit.edu

@@ -59,47 +59,64 @@ if ~exist(strcat(analysis_path))
 end 
 print(f, '-djpeg', strcat(analysis_path,'/vector_sum.jpeg'));
 %% 
-[X,Y] = meshgrid(cosd(theta)',sind(theta)');
+x=1:8;
+y=rand(1,8) ;
+npts=3;
+c_1=[1,1,1];
+c_2=exp(-.3*[1,2,3]);
 f=figure;
-ax=axes('position',[.1,.1,.8,.8]);
+set(f,'position',[595   595   778   210])
+ax=axes('position',[.05,.2,.25,.6]);
 hold on
-arr=arrayfun(@(x,y) quiver3(0*x,0*x,0*x,x,y,x*0,0,'k'), X(1,1:end),transpose(Y(1:end,1)))
-arrayfun(@(x) set(x,'linewidth',1),arr)
-arr=quiver3(0,0,0,0,0,1,0,'k');
-arrayfun(@(x) set(x,'linewidth',1),arr);
-set(ax,'View',[151.8282 19.1377])
-ax.YAxis.Visible='off';
-ax.XAxis.Visible='off';
-ax.ZAxis.Visible='off';
-% 
-U=rand(1,3);
-U=U./norm(U);
-V=rand(1,3);
-V=V./norm(V);
-U=1*[.3,.6,.8];
-V=1*[.6,.3,.5];
-V=V./norm(V);
-U=U./norm(U);
-W=U*dot(U,V)/(norm(U)*norm(V));
-arr=quiver3(0,0,0,W(1),W(2),W(3),0,'Color',[.2,.2,.2]);
-text(U(1)/2-.02,U(2)/2,U(3)/2.5,'|V_{w_j}|','HorizontalAlignment','left','fontsize',16)
-arr.MaxHeadSize=0;
-arrayfun(@(x) set(x,'linewidth',3),arr)
-arr=quiver3(0,0,0,U(1),U(2),U(3),0,'r');
-arr.MaxHeadSize=.5;
-text(U(1)-.05,U(2),U(3),'V_{w_i}','HorizontalAlignment','left','fontsize',16)
-arrayfun(@(x) set(x,'linewidth',2),arr)
-arr=quiver3(0,0,0,V(1),V(2),V(3),0,'b');
-text(V(1)/2-.05,V(2)/2,V(3)/2,'V_{w_j}','HorizontalAlignment','left','fontsize',16)
-arr.MaxHeadSize=.8;
-arrayfun(@(x) set(x,'linewidth',2),arr)
+a=stem(x,y,'DisplayName','pMI','Color',[0,0,0],'LineWidth',2)
+ax.XTick=x;
+%thr=.25;
+%plot(ax.XLim,ax.YLim*0+thr,'--','DisplayName','threshold','Color',[.5,.5,.5])
+ax.XTick=x;
+ax.XLabel.String='word position'
+ax.YLabel.String='PMI'
+ax.YLim=[0,1.5]
+ax.YTick=[];
+%y_nan=y;
+%y_nan(y_nan<thr)=0;
+%legend('show','Location','northwest')
+text(ax.XLim(1),ax.YLim(2)+.1,'A','HorizontalAlignment','right','FontSize',12,'FontWeight','bold')
+ax=axes('position',[.37,.6,.1,.2]);
+a=stem(1:length(c_1),c_1,'Color',[1,0,.5],'LineWidth',2)
+box off
+ax.YTick=[];
+ax.XTick=[];
+text(ax.XLim(1),ax.YLim(2)+.3,'B','HorizontalAlignment','right','FontSize',12,'FontWeight','bold')
+ax=axes('position',[.37,.2,.1,.2]);
+a=stem(1:length(c_2),c_2,'Color',[1,.5,0],'LineWidth',2)
+box off
+ax.XTickLabel={'c_1','c_2','c_3'};
+ax.YTick=[];
+text(ax.XLim(1),ax.YLim(2)+.3,'C','HorizontalAlignment','right','FontSize',12,'FontWeight','bold')
 
-W=W-V;
-arr=quiver3(V(1),V(2),V(3),W(1),W(2),W(3),0,'Color',[.2,.2,.2],'LineStyle','--');
+
+ax=axes('position',[.55,.2,.35,.6]);
+hold on
+y_auto_1=conv(y,c_1);
+y_auto_2=conv(y,c_2);
+a=plot(x,y_auto_1(x),'o-','DisplayName','constant kernel','color',[1,0,.5],'linewidth',2)
+a=plot(x,y_auto_2(x),'o-','DisplayName','exponential kernel','color',[1,.5,0],'linewidth',2)
+ax.XTick=x;
+ax.YLabel.String='\gamma'
+ax.YTick=[];
+ax.XLabel.String='word position'
+hold on
+a=plot(x,cumsum(y,2),'o--','DisplayName','no kernel','color',[.5,.5,.5],'linewidth',2)
+ax.XTick=x;
+text(ax.XLim(1),ax.YLim(2)+.4,'D','HorizontalAlignment','right','FontSize',12,'FontWeight','bold')
+legend('show','Location','northwest')
 arr.MaxHeadSize=0;
         if ~exist(strcat(analysis_path))
             mkdir(strcat(analysis_path))
         end 
+
+% 
+
 print(f, '-djpeg', strcat(analysis_path,'/norm_sum.jpeg'));
 
 %% 
