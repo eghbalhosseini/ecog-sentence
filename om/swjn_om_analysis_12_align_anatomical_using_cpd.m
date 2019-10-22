@@ -33,7 +33,7 @@ headshape.pos=sub_brain.cortex.vert;
 headshape.tri=sub_brain.cortex.tri;
 
 % cpd setting
-opt.method='affine'; % use nonrigid registration
+opt.method='rigid'; % use nonrigid registration
 opt.beta=2;            % the width of Gaussian kernel (smoothness)
 opt.lambda=3;          % regularization weight
 opt.viz=0;              % show every iteration
