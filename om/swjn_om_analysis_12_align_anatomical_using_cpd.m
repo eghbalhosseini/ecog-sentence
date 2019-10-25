@@ -41,7 +41,7 @@ opt.outliers=0.2;       % noise weight
 opt.fgt=0;              % do not use FGT (default)
 opt.normalize=0;        % normalize to unit variance and zero mean before registering (default)
 opt.corresp=0;          % compute correspondence vector at the end of registration (not being estimated by default)
-opt.max_it=5;         % max number of iterations
+opt.max_it=200;         % max number of iterations
 opt.tol=1e-7;          % tolerance
 
 % do transformation;
@@ -50,6 +50,7 @@ M = eye(4,4);
 M(1:3,1:3) = transform.R;
 M(1:3,4)   = transform.t;
 transform.M=M;
+transform.opt=opt;
 % save transformation;
 save_path=strcat([root_dir,subject_id,template_child_dir,opt.method,'_iter_',num2str(opt.max_it),'_transform.mat']);
 save(save_path,'transform');
