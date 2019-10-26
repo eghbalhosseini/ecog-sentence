@@ -33,17 +33,16 @@ headshape.pos=sub_brain.cortex.vert;
 headshape.tri=sub_brain.cortex.tri;
 
 % cpd setting
-opt.method='rigid'; % use nonrigid registration
-opt.beta=5;            % the width of Gaussian kernel (smoothness)
-opt.lambda=3;          % regularization weight
+opt.method='rigid';     % use nonrigid registration
 opt.viz=0;              % show every iteration
-opt.outliers=0.2;       % noise weight
-opt.fgt=0;              % do not use FGT (default)
-opt.normalize=0;        % normalize to unit variance and zero mean before registering (default)
-opt.corresp=0;          % compute correspondence vector at the end of registration (not being estimated by default)
-opt.max_it=200;         % max number of iterations
+opt.outliers=0.5;       % noise weight
+opt.fgt=1;              % do not use FGT (default)
+opt.normalize=1;        % normalize to unit variance and zero mean before registering (default)
+opt.scale=1;            % estimate global scaling too (default)
+opt.rot=1;              % estimate strictly rotational matrix (default)
+opt.corresp=0;          % do not compute the correspondence vector at the end of registration (default). Can be quite slow for large data sets.
+opt.max_it=5;           % max number of iterations
 opt.tol=1e-7;           % Tolerance
-opt.rot=0;
 
 % do transformation;
 [transform,~] = cpd_register(template.pos,headshape.pos, opt);
