@@ -14,7 +14,7 @@ end
 %%
 data_path='/Users/eghbalhosseiniasl1/MyData/ECoG-sentence';
 save_path='/Users/eghbalhosseiniasl1/MyData/ECoG-sentence/crunched/';
-d= dir([data_path,'/**/*.dat']);
+d= dir([data_path,'/**/ECOG*.dat']);
 fprintf(' %d .dat files were found \n', length(d))
 d_image= dir([data_path,'/**/*brain.mat']);
 %% 

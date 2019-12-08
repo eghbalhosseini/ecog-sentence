@@ -225,7 +225,10 @@ for k=1:size(stim_type,2)
     eval(strcat('sub_ica_dat.sess_',stim_type{k},'_elec_stim_str=elec_stim_str;')) ;
     eval(strcat('sub_ica_dat.sess_',stim_type{k},'_elec_stim_wordpos=elec_stim_wordpos;')) ;
 end
-
+%% 
+subs_sentence_mat.sentence_matrix=sub_ica_dat.sess_sentence_elec_stim_mat;
+subs_sentence_mat.sentence_str=sub_ica_dat.sess_sentence_elec_stim_str(1,:)
+save(strcat(analysis_path,'/subj_sentence_mat.mat'),'subs_sentence_mat')
 %%
 condition='sentence';
 switch condition
@@ -897,5 +900,131 @@ for K=5
     end
     
     
+end
+%% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% schematic for presentation 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+sub_pca_dat=sub_ica_dat;
+condition='sentence';
+switch condition
+    case 'sentence'
+        pca_mat=sub_pca_dat.sess_sentence_elec_stim_mat';
+        stim_str=sub_pca_dat.sess_sentence_elec_stim_str(1,:);
+    case 'nonwords'
+        pca_mat=sub_pca_dat.sess_nonwords_elec_stim_mat';
+        stim_str=sub_pca_dat.sess_nonwords_elec_stim_str(1,:);
+    case 'wordlist'
+        pca_mat=sub_pca_dat.sess_wordlist_elec_stim_mat';
+        stim_str=sub_pca_dat.sess_wordlist_elec_stim_str(1,:);
+    case 'jabberwocky'
+        pca_mat=sub_pca_dat.sess_jabberwocky_elec_stim_mat';
+        stim_str=sub_pca_dat.sess_jabberwocky_elec_stim_str(1,:);
+end
+close all
+R_width=.55;
+num_rows=5;
+plot_dist=.03;
+R_height=(.9-.05-plot_dist*num_rows)/num_rows;
+R_start=R_height*(0:num_rows-1)+plot_dist*(1:num_rows)+.02;
+num_columns=1;
+total_plots=length(R_start);
+p=0;
+% dimensionality of data and components
+M = 98; % number of features (e.g. sounds)
+N = 416; % number of measures (e.g. fMRI voxels)
+K = 10; % number of components
+for K=5
+    % create the data matrix
+    % decomposition analysis
+    N_RANDOM_INITS = 20;
+    PLOT_FIGURES = 0;
+    RAND_SEED = 1;
+    %[R_inferred, W_inferred,component_var] = nonparametric_pca(pca_mat, K, N_RANDOM_INITS, PLOT_FIGURES, RAND_SEED);
+    [coeff,score,latent,tsquared,explained,mu] = pca(pca_mat') ;
+    R_inferred=coeff(:,1:K);
+    W_inferred=transpose(score(:,1:K));
+    component_var=explained(1:K)';
+  
+    fig1=figure;
+    aspect_ration=9.32./4.13;
+    y=500;
+    set(fig1,'position',[591 455 aspect_ration*y y]);
+    ax=axes('position',[.1,.6,.3,.3]);
+    colors = cbrewer('div', 'RdBu', 128);
+    colors = flipud(colors); % puts red on top, blue at the bottom
+    colormap(colors);
+    imagesc(sub_pca_dat.sess_sentence_elec_stim_mat)
+    set(gca, 'ydir', 'reverse','box','on');
+    xlabel(condition)
+    ylabel('Voxels (Electrodes)')
+    title([condition,' Responses'])
+    ax.XTick=[];
+    ax.YTick=[];
+    hold on 
+    ax.FontSize=12;
+    %arrayfun(@(x) plot([x,x],ax.YLim,'w-'),[1:8:size(pca_mat,1)])
+    %
+    ax=axes('position',[.1,.1,.3,.2])
+    colors = cbrewer('div', 'RdBu', 128);
+    colors = flipud(colors); % puts red on top, blue at the bottom
+    colormap(colors);
+    imagesc(W_inferred)
+    set(gca, 'ydir', 'reverse','box','on');
+    title('Weights')
+    ax.XLabel.String='Voxels (Electrodes)';
+    ax.YLabel.String='Component';
+    ax.XTick=[];
+    ax.YTick=[];
+    ax.FontSize=12;
+    %
+    ax=axes('position',[.45,.1,.2./aspect_ration,.3*aspect_ration])
+    colors = cbrewer('div', 'RdBu', 128);
+    colors = flipud(colors); % puts red on top, blue at the bottom
+    colormap(colors);
+    imagesc(R_inferred)
+    set(gca, 'ydir', 'reverse','box','on');
+    title('Features');
+    ax.YLabel.String='sentence';
+    ax.XLabel.String='Component';
+    ax.XTick=[];
+    ax.YTick=[];
+    ax.FontSize=12;
+    
+    % 
+    ax=axes('position',[.6,.1,(.2./aspect_ration)/5,.3*aspect_ration])
+    colors = cbrewer('div', 'RdBu', 128);
+    colors = flipud(colors); % puts red on top, blue at the bottom
+    colormap(colors);
+    imagesc(R_inferred(:,1),[min(R_inferred(:)),max(R_inferred(:))])
+    
+    set(gca, 'ydir', 'reverse','box','on');
+    title('Feature 1');
+    ax.XTick=[];
+    ax.YTick=[];
+    ax.FontSize=12;
+    
+    % 
+    
+     ax=axes('position',[.67,.1,(.2./aspect_ration)/5,.3*aspect_ration])
+    colors = cbrewer('div', 'RdBu', 128);
+    colors = flipud(colors); % puts red on top, blue at the bottom
+    colormap(colors);
+   
+    
+    F1 = min(R_inferred(:)) + (max(R_inferred(:))-min(R_inferred(:)))*rand(size(R_inferred,1),1);
+    imagesc(F1,[min(R_inferred(:)),max(R_inferred(:))]);
+    title('F_1');
+    ax.FontSize=12;
+    set(gca, 'ydir', 'reverse','box','on');
+    ax.XTick=[];
+    ax.YTick=[];
+    
+    % 
+    analysis_path='/Users/eghbalhosseiniasl1/MyData/ECoG-sentence/analysis/swjn_Aim_2_graphics';
+    if ~exist(strcat(analysis_path))
+            mkdir(strcat(analysis_path))
+    end 
+    print(fig1, '-djpeg', strcat(analysis_path,'/ICA_analysis.jpeg'));
 end
 

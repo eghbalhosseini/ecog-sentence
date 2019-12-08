@@ -450,6 +450,7 @@ for i=1:length(d)
     clear subj data
     
 end 
+%% 
 %%%%%%%%%%%%% replicate PNAS figure 1 
 close all;
 
@@ -464,30 +465,70 @@ N=double(mean(session_nonwords_hilbert_band_ave_envelope_tensor(find(info.ramp_e
 N_baseline=repmat(double(mean(session_nonwords_hilbert_band_ave_envelope_pre_trial_tensor(find(info.ramp_electrodes_gamma_odd),:,:),3)),...
     1,size(N,2));
 N_change_percent=N./N_baseline*100-100;
-%     
-figure;
-hold on
+% 
+W=double(mean(session_words_hilbert_band_ave_envelope_tensor(find(info.ramp_electrodes_gamma_odd),:,:),3));
+W_baseline=repmat(double(mean(session_words_hilbert_band_ave_envelope_pre_trial_tensor(find(info.ramp_electrodes_gamma_odd),:,:),3)),...
+    1,size(N,2));
+W_change_percent=W./W_baseline*100-100;
+% 
+J=double(mean(session_jabberwocky_hilbert_band_ave_envelope_tensor(find(info.ramp_electrodes_gamma_odd),:,:),3));
+J_baseline=repmat(double(mean(session_jabberwocky_hilbert_band_ave_envelope_pre_trial_tensor(find(info.ramp_electrodes_gamma_odd),:,:),3)),...
+    1,size(N,2));
+J_change_percent=J./J_baseline*100-100;
 
-color_id=2;
+%     
+f=figure;
+
+ax=axes('position',[.3,.2,.65,0.5]);
+color_id=1;
 errorbar(mean(word_position,1),mean(S_change_percent,1),std(S_change_percent,1)./sqrt(size(S_change_percent,1)),'-s','MarkerSize',10,'color',colors(color_id,:),...
     'MarkerEdgeColor',colors(color_id,:),'MarkerFaceColor',colors(color_id,:),'DisplayName','Sentences','LineWidth',3 );
+hold on
 
 
-color_id=1;
+color_id=2;
+errorbar(mean(word_position,1),mean(W_change_percent,1),std(W_change_percent,1)./sqrt(size(W_change_percent,1)),'-s','MarkerSize',10,'color',colors(color_id,:),...
+    'MarkerEdgeColor',colors(color_id,:),'MarkerFaceColor',colors(color_id,:),'DisplayName','Words','LineWidth',3 );
+
+color_id=3;
+errorbar(mean(word_position,1),mean(J_change_percent,1),std(J_change_percent,1)./sqrt(size(J_change_percent,1)),'-s','MarkerSize',10,'color',colors(color_id,:),...
+    'MarkerEdgeColor',colors(color_id,:),'MarkerFaceColor',colors(color_id,:),'DisplayName','Jabberwocky','LineWidth',3 );
+
+color_id=4;
 errorbar(mean(word_position,1),mean(N_change_percent,1),std(N_change_percent,1)./sqrt(size(N_change_percent,1)),'-s','MarkerSize',10,'color',colors(color_id,:),...
-    'MarkerEdgeColor',colors(color_id,:),'MarkerFaceColor',colors(color_id,:),'DisplayName','nonwords-list','LineWidth',3 );
-set(gca,'ylim',[-5,40])
+    'MarkerEdgeColor',colors(color_id,:),'MarkerFaceColor',colors(color_id,:),'DisplayName','Nonwords','LineWidth',3 );
+
+
+ax.FontSize=15;
+
+ax.FontWeight='bold '
+set(ax,'ylim',[-5,30])
+set(ax,'xlim',[.5,8.5]);
+p=plot(ax.XLim,[0,0],'k--')
+hAnnotation=arrayfun(@(x) get(x,'Annotation'),p);
+hLegendEntry = arrayfun(@(x) get(x,'LegendInformation'),hAnnotation);
+arrayfun(@(x) set(x,'IconDisplayStyle','off'),hLegendEntry);
+box off 
 xlabel('word position')
-ylabel({'% signal change ','from pre-trial baseline'});
-title({strcat('subject : ',info.subject),'results based on gausian filter bank'})
+ax.YLabel.String={'% Signal change ','from pre-trial'};
+ax.YLabel.Rotation=0;
+ax.YLabel.HorizontalAlignment='right'
+ax.LineWidth=2
+l=legend('position',[.35,.6,.25,.2])
+l.FontSize=16;
+l.Box='off'
+%title({strcat('subject : ',info.subject),'results based on gausian filter bank'})
 
 if ~exist(strcat(analysis_path,info.subject))
         mkdir(strcat(analysis_path,info.subject))
 end 
 %print(gcf, '-dtiffn', strcat(analysis_path,info.subject,'/',info.subject,'_figure_1')); 
-print(gcf, '-dpng', strcat(analysis_path,info.subject,'/',info.subject,'_figure_1_full_set')); 
-close(gcf)
-%
+%print(gcf, '-dpng', strcat(analysis_path,info.subject,'/',info.subject,'_figure_1_full_set')); 
+%print(gcf, '-dpng', strcat(analysis_path,info.subject,'/',info.subject,'_figure_1_full_set')); 
+analysis_path='/Users/eghbalhosseiniasl1/MyData/ECoG-sentence/analysis/swjn_Aim_1_graphics';
+print(f, '-djpeg', strcat(analysis_path,sprintf('/%s_average_signal_change_SWJN.jpeg',subject_id)));
+%close(gcf)
+%%
 %%%%%%%%%%%% plot full timecourse 
 
 S=double(mean(session_sentence_hilbert_band_envelope_tensor(find(info.ramp_electrodes_gamma_odd),:,:),3));

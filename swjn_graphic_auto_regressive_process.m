@@ -59,48 +59,47 @@ if ~exist(strcat(analysis_path))
 end 
 print(f, '-djpeg', strcat(analysis_path,'/vector_sum.jpeg'));
 %% 
-x=1:8;
-y=rand(1,8) ;
+x=2:8;
+y=rand(1,7) ;
 npts=3;
 c_1=[1,1,1];
 c_2=exp(-.3*[1,2,3]);
 f=figure;
 set(f,'position',[595   595   778   210])
-ax=axes('position',[.05,.2,.25,.6]);
+ax=axes('position',[.05,.3,.15,.5]);
 hold on
 a=stem(x,y,'DisplayName','pMI','Color',[0,0,0],'LineWidth',2)
 ax.XTick=x;
 %thr=.25;
 %plot(ax.XLim,ax.YLim*0+thr,'--','DisplayName','threshold','Color',[.5,.5,.5])
-ax.XTick=x;
 ax.XLabel.String='word position'
 ax.YLabel.String='PMI'
 ax.YLim=[0,1.5]
+ax.XLim=[1,9];
 ax.YTick=[];
-%y_nan=y;
-%y_nan(y_nan<thr)=0;
-%legend('show','Location','northwest')
-text(ax.XLim(1),ax.YLim(2)+.1,'A','HorizontalAlignment','right','FontSize',12,'FontWeight','bold')
-ax=axes('position',[.37,.6,.1,.2]);
+ax.FontSize=16
+
+text(ax.XLim(1),ax.YLim(2)+.2,'A','HorizontalAlignment','right','FontSize',20,'FontWeight','bold')
+ax=axes('position',[.25,.65,.05,.1]);
 a=stem(1:length(c_1),c_1,'Color',[1,0,.5],'LineWidth',2)
 box off
 ax.YTick=[];
 ax.XTick=[];
-text(ax.XLim(1),ax.YLim(2)+.3,'B','HorizontalAlignment','right','FontSize',12,'FontWeight','bold')
-ax=axes('position',[.37,.2,.1,.2]);
+text(ax.XLim(1),ax.YLim(2)+.6,'B','HorizontalAlignment','right','FontSize',20,'FontWeight','bold')
+ax=axes('position',[.25,.3,.05,.15]);
 a=stem(1:length(c_2),c_2,'Color',[1,.5,0],'LineWidth',2)
 box off
 ax.XTickLabel={'c_1','c_2','c_3'};
 ax.YTick=[];
-text(ax.XLim(1),ax.YLim(2)+.3,'C','HorizontalAlignment','right','FontSize',12,'FontWeight','bold')
+text(ax.XLim(1),ax.YLim(2)+.5,'C','HorizontalAlignment','right','FontSize',20,'FontWeight','bold')
+ax.FontSize=16
 
-
-ax=axes('position',[.55,.2,.35,.6]);
+ax=axes('position',[.35,.3,.2,.5]);
 hold on
 y_auto_1=conv(y,c_1);
 y_auto_2=conv(y,c_2);
-a=plot(x,y_auto_1(x),'o-','DisplayName','constant kernel','color',[1,0,.5],'linewidth',2)
-a=plot(x,y_auto_2(x),'o-','DisplayName','exponential kernel','color',[1,.5,0],'linewidth',2)
+a=plot(x,y_auto_1(x),'o-','DisplayName','constant','color',[1,0,.5],'linewidth',2)
+a=plot(x,y_auto_2(x),'o-','DisplayName','exponential','color',[1,.5,0],'linewidth',2)
 ax.XTick=x;
 ax.YLabel.String='\gamma'
 ax.YTick=[];
@@ -108,9 +107,11 @@ ax.XLabel.String='word position'
 hold on
 a=plot(x,cumsum(y,2),'o--','DisplayName','no kernel','color',[.5,.5,.5],'linewidth',2)
 ax.XTick=x;
-text(ax.XLim(1),ax.YLim(2)+.4,'D','HorizontalAlignment','right','FontSize',12,'FontWeight','bold')
-legend('show','Location','northwest')
+text(ax.XLim(1),ax.YLim(2)+.6,'D','HorizontalAlignment','right','FontSize',20,'FontWeight','bold')
+%legend('show','Location','northwest')
+ax.FontSize=16;
 arr.MaxHeadSize=0;
+ax.XLim=[1,9];
         if ~exist(strcat(analysis_path))
             mkdir(strcat(analysis_path))
         end 

@@ -59,10 +59,11 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%  STEP 1 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-node_table(1,:)
-sentence=node_cell{1,1};
-open_nodes=node_cell{1,2};
-closed_nodes=node_table.closed_nodes{1};
+id=8
+node_table(id,:)
+sentence=node_cell{id,1};
+open_nodes=node_cell{id,2};
+closed_nodes=node_table.closed_nodes{id};
 
 extra_branch=sum(closed_nodes);
 node_x=1:8;
@@ -104,7 +105,7 @@ end
 %shg
 % plotting 
 f=figure;
-ax=axes('Position',[.2,.3,.6,.6]);
+ax=axes('Position',[.2,.3,.6,.2]);
 hold on 
 bl=arrayfun(@(p) plot(x(p{:}),y(p{:}),'k'), num2cell(node_con', 1),'UniformOutput',false);
 bl1=plot(x,y,'k.')
@@ -115,15 +116,15 @@ sentence_split=strsplit(sentence);
 ax.XTickLabel=sentence_split(1:8);
 ax.XAxis.Visible='off'
 ax.YAxis.Visible='off'
-daspect([1,2,1]);
+daspect([1,2.8,1]);
 
-arrayfun(@(p) text(x(p),y(p)-.8,sentence_split{p},'verticalalignment','bottom','horizontalalignment','center','fontsize',10),1:8)
-arrayfun(@(p) text(x(p),y(p)-1.2,sprintf('%1.0d',open_nodes(p)),'verticalalignment','bottom','horizontalalignment','center','fontsize',8),1:8)
-arrayfun(@(p) text(x(p),y(p)-1.6,sprintf('%1.1d',closed_nodes(p)),'verticalalignment','bottom','horizontalalignment','center','fontsize',8),1:8)
-arrayfun(@(p) text(x(p),y(p)-2,sprintf('%1.1d',(p)),'verticalalignment','bottom','horizontalalignment','center','fontsize',8),1:8)
-text(x(1)-1.2,y(1)-1.2,'open nodes:','verticalalignment','bottom','horizontalalignment','left','fontsize',8);
-text(x(1)-1.2,y(1)-1.6,'node closing:','verticalalignment','bottom','horizontalalignment','left','fontsize',8);
-text(x(1)-1.2,y(1)-2,'word position:','verticalalignment','bottom','horizontalalignment','left','fontsize',8);
+arrayfun(@(p) text(x(p),y(p)-.8,sentence_split{p},'verticalalignment','middle','horizontalalignment','center','fontsize',15),1:8)
+arrayfun(@(p) text(x(p),y(p)-1.2,sprintf('%1.0d',open_nodes(p)),'verticalalignment','top','horizontalalignment','center','fontsize',14),1:8)
+%arrayfun(@(p) text(x(p),y(p)-2,sprintf('%1.1d',closed_nodes(p)),'verticalalignment','top','horizontalalignment','center','fontsize',14),1:8)
+arrayfun(@(p) text(x(p),y(p)-2.2,sprintf('%1.1d',(p)),'verticalalignment','top','horizontalalignment','center','fontsize',14),1:8)
+text(x(1)-.2,y(1)-1.2,'ON:','verticalalignment','top','horizontalalignment','right','fontsize',14);
+%text(x(1)-.2,y(1)-2,'NC:','verticalalignment','top','horizontalalignment','right','fontsize',14);
+text(x(1)-.2,y(1)-2.2,'WP:','verticalalignment','top','horizontalalignment','right','fontsize',14);
 
 
 

@@ -302,12 +302,14 @@ colors = cbrewer('div', 'RdBu', 128);
 colors = flipud(colors); % puts red on top, blue at the bottom
 colormap(colors);
 for i=1:size(w2v_RDM,2)
-    subplot(2,2,2*i-1)
+    ax=subplot(2,2,2*i-1);
     imagesc(w2v_RDM{i},[0,2]);
     daspect([1,1,1])
     title({conditions{i},'word2vec order'});
     set(gca, 'ydir', 'reverse','box','off');
     handles = colorbar;
+    %ax.XAxis.Visible='off'
+    % ax.YAxis.Visible='off'
     handles.TickDirection = 'out';
     handles.Box = 'off';
     drawnow;

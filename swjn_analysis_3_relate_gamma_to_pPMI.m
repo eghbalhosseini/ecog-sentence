@@ -4,7 +4,7 @@
 clear all 
 close all 
 data_path='/Users/eghbalhosseiniasl1/MyData/ecog-sentence';
-subject_id='AMC037';
+subject_id='AMC026';
 d= dir([data_path,strcat('/**/',subject_id,'*_crunched.mat')]);
 fprintf(' %d .mat files were found \n', length(d));
 gamma_band_index=4;
@@ -51,8 +51,10 @@ for i=1:length(d)
     subj=subj.(subj_id{1});
     data=subj.data;
     info=subj.info;
-    language_electrode=info.language_responsive_electrodes_hilbert_odd;
+    language_electrode=info.ramp_electrodes_hilbert_odd;
     language_electrode_num=find(language_electrode);
+    
+    
     
     % step 1: extract electrodes with siginificant language response
     sentence_trial_index=~cellfun(@isempty,cellfun(@ (x) strfind(x,'S'),info.word_type,'UniformOutput',false));
@@ -293,29 +295,30 @@ for i=1%:%length(language_electrode_num)
     [row_p,col_p]=find(wordpos_all_diffs_upper);
     
     f=figure;
-    set(f,'position',[1341 334 960 783])
-    ax=axes('position',[.1,.1,.3,.3])
+    set(f,'position',[-1341 334 960 960])
+    ax=axes('position',[.05,.1,.25,.25])
+    
     hold on 
     ax.XLim=[0,9];
     ax.YLim=[0,9];
-    arrayfun(@(x,y,z) text(x,y,num2str(wordpos_all_diffs_upper(x,y))),row_p,col_p);
+    arrayfun(@(x,y,z) text(x,y,num2str(wordpos_all_diffs_upper(x,y)),'FontSize',12),row_p,col_p);
    
     ax.XAxis.Direction='reverse';
+    ax.FontSize=16
     
-    text(ax.XLim(2),ax.XLim(2)+1,'B','HorizontalAlignment','right','FontSize',12,'FontWeight','bold')
+    text(ax.XLim(2),ax.XLim(2)+1,'A','HorizontalAlignment','right','FontSize',20,'FontWeight','bold')
     daspect([1,1,1])
     ax.XTick=[1:8];ax.XTickLabelRotation=90;
     ax.XTickLabel=fliplr(strsplit(all_sentence_pattern{1}));
     ax.YTick=[1:8];ax.YTickLabelRotation=0;
     ax.YTickLabel=fliplr(strsplit(all_sentence_pattern{1}));
     ax.Title.String='Word Position';
-    
-    ax=axes('position',[.1,.6,.3,.3])
+    ax=axes('position',[.30,.1,.25,.25])
     hold on 
     ax.XLim=[0,9];
     ax.YLim=[0,9];
     pmi_sent=pmi_cell{all_sentence_pattern_id(1),2};
-    arrayfun(@(x,y,z) text(y,x,num2str(pmi_sent(x,y),'%1.1f')),row_p,col_p);
+    arrayfun(@(x,y,z) text(y,x,num2str(pmi_sent(x,y),'%1.1f'),'FontSize',12),row_p,col_p);
     ax.YAxis.Direction='reverse';
     ax.XAxis.Direction='normal';
     daspect([1,1,1])
@@ -324,14 +327,16 @@ for i=1%:%length(language_electrode_num)
     ax.YTick=[1:8];ax.YTickLabelRotation=0;
     ax.YTickLabel=(strsplit(all_sentence_pattern{1}));
     ax.Title.String='Pointwise Mutual Info';
-    text(ax.XLim(1),ax.XLim(1)-1,'A','HorizontalAlignment','right','FontSize',12,'FontWeight','bold')
+    text(ax.XLim(1),ax.XLim(1)-1,'B','HorizontalAlignment','right','FontSize',20,'FontWeight','bold')
     % 
-    ax=axes('position',[.5,.3,.3,.3]);
+    ax.YTick=[];
+    ax.FontSize=16;
+    ax=axes('position',[.55,.1,.25,.25]);
     hold on 
     ax.XLim=[0,9];
     ax.YLim=[0,9];
    
-    arrayfun(@(x,y,z) text(y,x,num2str(a_all_diffs_upper(x,y),'%1.1f'),'horizontalalignment','center'),row_p,col_p);
+    arrayfun(@(x,y,z) text(y,x,num2str(a_all_diffs_upper(x,y),'%1.1f'),'FontSize',12,'horizontalalignment','center'),row_p,col_p);
     ax.YAxis.Direction='reverse';
     ax.XAxis.Direction='normal';
    daspect([1,1,1])
@@ -341,8 +346,10 @@ for i=1%:%length(language_electrode_num)
     ax.YTick=[1:8];ax.YTickLabelRotation=0;
     ax.YTickLabel=(strsplit(all_sentence_pattern{1}));
      ax.Title.String={'Change in',' gamma power'};
-    text(ax.XLim(1),ax.XLim(1)-1,'C','HorizontalAlignment','right','FontSize',12,'FontWeight','bold')
-    ax=axes('position',[.82,.3,.1,.3]);
+     ax.YTick=[];
+     ax.FontSize=16;
+    text(ax.XLim(1),ax.XLim(1)-1,'C','HorizontalAlignment','right','FontSize',20,'FontWeight','bold')
+    ax=axes('position',[.80,.1,.07,.25]);
     p=plot(a,[1:8],'Marker','.','color','k');
     p.MarkerSize=20;
     p.LineWidth=2
@@ -352,14 +359,231 @@ for i=1%:%length(language_electrode_num)
     ax.YAxis.Direction='reverse';
     ax.YAxis.Visible='off'
     ax.Box='off'
-    ax.Title.String=' gamma power';
+    ax.Title.String={'gamma','power'};
+ax.FontSize=16;
+        if ~exist(strcat(analysis_path,info.subject))
+            mkdir(strcat(analysis_path,info.subject))
+        end 
+        %set(gcf,'PaperPosition',[.25 .25 8 6])
+        print(gcf, '-djpeg', strcat(analysis_path,info.subject,'/',info.subject,'_representitive_fig')); 
+    
+end
+
+%% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%  create a schematic of analysis pipline for presentation   
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+close all 
+look_out_window=100; %200 ms
+offset=30; % 100 ms
+word_range=[1:8];
+num_rows=5;
+num_columns=2;
+total_plots=num_rows*num_columns;
+p=0;
+for i=1%:%length(language_electrode_num)
+    elec_response_to_next_word_pattern=[];
+    electrode_response=squeeze(session_sentence_hilbert_band_envelope_lang_elec_tensor(i,:,:));
+    electrode_response_sentence_cell=mat2cell(electrode_response,ones(1,size(electrode_response,1)),size(electrode_response,2)/8*ones(1,8));
+    electrode_1st_sent_cell=[electrode_response_sentence_cell(1,:)];
+    a=cell2mat(cellfun(@(x)  nanmean(x),electrode_1st_sent_cell,'UniformOutput',false));
+    b=ones(size(a,2));
+    [row,col]=find(b);
+    a_all_diffs=arrayfun(@(x,y) a(y)-a(x),row,col);
+    a_all_diffs_upper=triu(reshape(a_all_diffs,size(a,2),[]),1);
+    wordpos_all_diffs=arrayfun(@(x,y) y-x,row,col);
+    wordpos_all_diffs_upper=triu(reshape(wordpos_all_diffs,size(a,2),[]),1);
+    [row_p,col_p]=find(wordpos_all_diffs_upper);
+    
+    close all 
+f=figure;
+aspect_ration=9.32./4.13;
+y=500;
+set(f,'position',[591 455 aspect_ration*y y]);
+ax=axes('position',[.05,.15,.22,.22*aspect_ration])
+    
+    hold on 
+    ax.XLim=[0,9];
+    ax.YLim=[0,9];
+    arrayfun(@(x,y,z) text(x,y,num2str(wordpos_all_diffs_upper(x,y)),'FontSize',12),row_p,col_p);
+   
+    ax.XAxis.Direction='reverse';
+    ax.FontSize=14;
+    ax.FontWeight='bold';
+    
+    %text(ax.XLim(2),ax.XLim(2)+1,'A','HorizontalAlignment','right','FontSize',20,'FontWeight','bold')
+    daspect([1,1,1])
+    ax.XTick=[1:8];ax.XTickLabelRotation=90;
+    ax.XTickLabel=fliplr(strsplit(all_sentence_pattern{1}));
+    ax.YTick=[1:8];ax.YTickLabelRotation=0;
+    ax.YTickLabel=fliplr(strsplit(all_sentence_pattern{1}));
+    ax.Title.String='Word Position (wp)';
+    ax=axes('position',[.33,.15,.22,.22*aspect_ration])
+    hold on 
+    ax.XLim=[0,9];
+    ax.YLim=[0,9];
+    pmi_sent=pmi_cell{all_sentence_pattern_id(1),2};
+    arrayfun(@(x,y,z) text(y,x,num2str(pmi_sent(x,y),'%1.1f'),'FontSize',12),row_p,col_p);
+    ax.YAxis.Direction='reverse';
+    ax.XAxis.Direction='normal';
+    daspect([1,1,1])
+    ax.XTick=[1:8];ax.XTickLabelRotation=90;
+    ax.XTickLabel=(strsplit(all_sentence_pattern{1}));
+    ax.YTick=[1:8];ax.YTickLabelRotation=0;
+    ax.YTickLabel=(strsplit(all_sentence_pattern{1}));
+    ax.Title.String='Pointwise Mutual Info (pmi)';
+    %text(ax.XLim(1),ax.XLim(1)-1,'B','HorizontalAlignment','right','FontSize',20,'FontWeight','bold')
+    % 
+    %ax.YTick=[];
+    ax.FontSize=14;
+    ax.FontWeight='bold';
+    
+    ax=axes('position',[.61,.15,.22,.22*aspect_ration]);
+    hold on 
+    ax.XLim=[0,9];
+    ax.YLim=[0,9];
+   
+    arrayfun(@(x,y,z) text(y,x,num2str(a_all_diffs_upper(x,y),'%1.1f'),'FontSize',12,'horizontalalignment','center'),row_p,col_p);
+    ax.YAxis.Direction='reverse';
+    ax.XAxis.Direction='normal';
+   daspect([1,1,1])
+    fliplr(strsplit(all_sentence_pattern{1}))
+    ax.XTick=[1:8];ax.XTickLabelRotation=90;
+    ax.XTickLabel=(strsplit(all_sentence_pattern{1}));
+    ax.YTick=[1:8];ax.YTickLabelRotation=0;
+    ax.YTickLabel=(strsplit(all_sentence_pattern{1}));
+     ax.Title.String={'Change in',' gamma power'};
+    % ax.YTick=[];
+     ax.FontSize=14;
+    ax.FontWeight='bold';
+    
+    %text(ax.XLim(1),ax.XLim(1)-1,'C','HorizontalAlignment','right','FontSize',20,'FontWeight','bold')
+    ax=axes('position',[.85,.15,.1,.22*aspect_ration]);
+    p=plot(a,[1:8],'Marker','.','color','k');
+    p.MarkerSize=20;
+    p.LineWidth=2
+    ax.YLim=[0,9];
+    ax.XLim=1.2*[min(a),max(a)];
+    ax.XAxis.Direction='normal';
+    ax.YAxis.Direction='reverse';
+    ax.YAxis.Visible='off'
+    ax.Box='off'
+    ax.Title.String={'average','gamma','power'};
+ax.FontSize=14;
+    ax.FontWeight='bold';
+   
+    
+    ax=axes('position',[.61,.82,.22,.05*aspect_ration]);
+    b=barh(1,[.6],'DisplayName','wp','facecolor',[1,.3,.3])
+    text(.65,1.2,'wp','FontSize',14,'FontWeight','bold')
+    hold on
+    b=barh(0,[.8],'DisplayName','pmi','facecolor',[.3,.3,1])
+    text(.85,.2,'pmi','FontSize',14,'FontWeight','bold')
+    %legend('position',[.81,.93,.05,.05])
+     ax.XLim=[-.1,1.1]
+    ax.YTick=[]
+    ax.Box='off'
+    ax.XAxis.Visible='off'
+    ax.YAxis.Visible='off'
+    ax.Title.String='R^2'
+   ax.FontSize=14;
 
         if ~exist(strcat(analysis_path,info.subject))
             mkdir(strcat(analysis_path,info.subject))
         end 
-        set(gcf,'PaperPosition',[.25 .25 8 6])
-        print(gcf, '-djpeg', strcat(analysis_path,info.subject,'/',info.subject,'_representitive_fig')); 
+        %set(gcf,'PaperPosition',[.25 .25 8 6])
+        print(gcf, '-djpeg', strcat(analysis_path,info.subject,'/',info.subject,'_representitive_fig_presentation')); 
     
 end
+% 
+
+
+
+%% 
+%%  create a schematic of analysis pipline for presentation   
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+close all 
+look_out_window=100; %200 ms
+offset=30; % 100 ms
+word_range=[1:8];
+num_rows=5;
+num_columns=2;
+total_plots=num_rows*num_columns;
+p=0;
+idx=3;
+electrode_id=language_electrode_num(idx);
+sentence_id=1;
+for i=idx%:%length(language_electrode_num)
+    elec_response_to_next_word_pattern=[];
+    electrode_response=double(squeeze(session_sentence_hilbert_band_envelope_lang_elec_tensor(i,:,:)));
+    electrode_response_sentence_cell=mat2cell(electrode_response,ones(1,size(electrode_response,1)),size(electrode_response,2)/8*ones(1,8));
+    electrode_1st_sent_cell=[electrode_response_sentence_cell(sentence_id,:)];
+    a=cell2mat(cellfun(@(x)  nanmean(x),electrode_1st_sent_cell,'UniformOutput',false));
+   
+    close all 
+f=figure;
+aspect_ration=9.32./4.13;
+y=300;
+set(f,'position',[591 455 aspect_ration*y y]);
+ax=axes('position',[.1,.15,.38,.2*aspect_ration])
+y1=electrode_response(sentence_id,:);
+%y1=double(mean(elec_sentence_resp,2));
+%e1=nanstd(elec_sentence_resp,0,2)./sqrt(sum(~isnan(elec_sentence_resp),2));
+x=[1:length(y1)];
+%[l,p] = boundedline(x, y1, e1, 'cmap',[1,0,0]);
+l=plot(x,y1,'color',[.8,0,0])
+
+l.DisplayName='S';
+l.LineWidth=2;
+
+
+ax.XLim=[-120,1080];
+ax.XTick=[-120,1:135:1080];
+ax.FontSize=14;
+hold on 
+ax.YLim=1.2*[min(y1),max(y1)];
+ref=arrayfun(@(x)plot([x,x],ax.YLim,'k--'),ax.XTick(2:end));
+Annotation=arrayfun(@(x) get(x,'Annotation'),ref);
+hLegendEntry = arrayfun(@(x) get(x,'LegendInformation'),Annotation);
+arrayfun(@(x) set(x,'IconDisplayStyle','off'),hLegendEntry);
+
+ax.XTickLabel={'Word:','1','2','3','4','5','6','7','8'};
+
+ax.YAxis.Label.String='a.u.'
+
+ax.FontWeight='bold'
+ax.Box='off'
+
+    ax=axes('position',[.58,.15,.38,.2*aspect_ration])
+    
+    %text(ax.XLim(1),ax.XLim(1)-1,'C','HorizontalAlignment','right','FontSize',20,'FontWeight','bold')
+    p=plot([1:8],a,'Marker','.','color',[.8,0,0]);
+    p.MarkerSize=20;
+    p.LineWidth=2
+    ax.XLim=[0,9];
+    ax.YLim=1.5*ax.YLim;
+    ax.XAxis.Direction='normal';
+    ax.XTick=[0:8];
+    ax.XTickLabel={'Word:','1','2','3','4','5','6','7','8'};
+ax.YAxis.Label.String='a.u.'
+ax.FontSize=14;
+ax.FontWeight='bold'
+ax.Box='off'
+
+    
+   
+    
+    
+        if ~exist(strcat(analysis_path,info.subject))
+            mkdir(strcat(analysis_path,info.subject))
+        end 
+        %set(gcf,'PaperPosition',[.25 .25 8 6])
+        print(gcf, '-djpeg', strcat(analysis_path,info.subject,'/',info.subject,'_representitive_fig_pmi_presentation')); 
+    
+end
+% 
+
 
 

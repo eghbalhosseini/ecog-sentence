@@ -147,6 +147,28 @@ for kk=1:size(all_pmi_pattern,1)
     end 
     all_next_word_pmi=[all_next_word_pmi;next_word_pmi];
 end 
+%% 
+%all_next_word_pmi_cell=mat2cell(all_next_word_pmi,size(all_next_word_pmi,1),ones(1,size(all_next_word_pmi,2)))
+groups=repmat(2:8,size(all_next_word_pmi,1),1);
+close all 
+f=figure; 
+ax1=subplot('position',[.2,.15,.75,.6]);
+
+b_jitter_permuted=beeswarm(groups(:),all_next_word_pmi(:),'hex','none',.3);
+bl=get(ax1,'Children');
+arrayfun(@(x) set(x,'markerfacealpha',1),bl,'UniformOutput',false)
+ax1.YLim=[-2,max(ax1.YLim)];
+ax1.YLimMode='auto';
+ax1.XTick=[0,2:8];
+ax1.XLim=[0,9];
+ax1.XTickLabel={'Word:','1\rightarrow2','2\rightarrow3','3\rightarrow4','4\rightarrow5','5\rightarrow6','6\rightarrow7','7\rightarrow8'};
+
+ax1.FontSize=12
+ax1.FontWeight='bold'
+hold on
+ax1.YLabel.String='PMI'
+print(f, '-djpeg', strcat(analysis_path,'/pmi_dist.jpeg'));
+
 
 %% plot average for pre-post in word closing 
 close all 

@@ -31,7 +31,8 @@ z=theta*0+0;
  
 [X,Y] = meshgrid(cosd(theta)',sind(theta)');
 f=figure;
-ax=axes('position',[.1,.1,.8,.8]);
+set(f,'position',[-1743 834 970 970]);
+ax=axes('position',[.1,.1,.35,.35]);
 hold on
 arr=arrayfun(@(x,y) quiver3(0*x,0*x,0*x,x,y,x*0,0,'k'), X(1,1:end),transpose(Y(1:end,1)))
 arrayfun(@(x) set(x,'linewidth',1),arr)
@@ -63,15 +64,12 @@ arr=quiver3(0,0,0,V(1),V(2),V(3),0,'b');
 text(V(1)/2-.05,V(2)/2,V(3)/2,'V_{w_j}','HorizontalAlignment','left','fontsize',16)
 arr.MaxHeadSize=.8;
 arrayfun(@(x) set(x,'linewidth',2),arr)
-
-        if ~exist(strcat(analysis_path))
-            mkdir(strcat(analysis_path))
-        end 
-print(f, '-djpeg', strcat(analysis_path,'/vector_sum.jpeg'));
-%% 
+a=annotation(f,'textbox',[.1 .41 .7 .05],'String',...
+    'A',...
+    'FontSize',15,'FontWeight','bold','LineStyle','none');
+ %%%%%%%%%%%%%%%%%%%%%%%
 [X,Y] = meshgrid(cosd(theta)',sind(theta)');
-f=figure;
-ax=axes('position',[.1,.1,.8,.8]);
+ax=axes('position',[.45,.1,.35,.35]);
 hold on
 arr=arrayfun(@(x,y) quiver3(0*x,0*x,0*x,x,y,x*0,0,'k'), X(1,1:end),transpose(Y(1:end,1)))
 arrayfun(@(x) set(x,'linewidth',1),arr)
@@ -104,12 +102,16 @@ text(V(1)/2-.05,V(2)/2,V(3)/2,'V_{w_j}','HorizontalAlignment','left','fontsize',
 arr.MaxHeadSize=.8;
 arrayfun(@(x) set(x,'linewidth',2),arr)
 
+a=annotation(f,'textbox',[.45 .41 .7 .05],'String',...
+    'B',...
+    'FontSize',15,'FontWeight','bold','LineStyle','none');
+
 W=W-V;
 arr=quiver3(V(1),V(2),V(3),W(1),W(2),W(3),0,'Color',[.2,.2,.2],'LineStyle','--');
 arr.MaxHeadSize=0;
         if ~exist(strcat(analysis_path))
             mkdir(strcat(analysis_path))
         end 
-print(f, '-djpeg', strcat(analysis_path,'/norm_sum.jpeg'));
+print(f, '-djpeg', strcat(analysis_path,'/distributional_dist.jpeg'));
 
 %% 

@@ -17,15 +17,18 @@ end
 %%
 x=2:8;
 y=rand(1,7) ;
-
+close all 
 f=figure;
-set(f,'position',[1572         802         778         210])
-ax=axes('position',[.05,.2,.2,.6]);
-ax.FontSize=14
+aspect_ration=9.32./4.13;
+y_dim=250;
+set(f,'position',[591 455 aspect_ration*y_dim y_dim]);
+ax=axes('position',[.05,.2,.3,.4]);
+ax.FontSize=12;
+ax.FontWeight='bold'
 hold on
 a=stem(x,y,'DisplayName','pMI','Color',[0,0,0],'LineWidth',2)
 ax.XTick=x;
-thr=.25;
+thr=.4;
 plot(ax.XLim,ax.YLim*0+thr,'--','DisplayName','threshold','Color',[.5,.5,.5])
 ax.XTick=x;
 ax.XLabel.String='word position'
@@ -36,8 +39,8 @@ y_nan=y;
 y_nan(y_nan<thr)=0;
 legend('show','Location','northwest');
 ax.YTick=[];
-text(ax.XLim(1)-.5,ax.YLim(2)+.15,'A','HorizontalAlignment','right','FontSize',14,'FontWeight','bold')
-ax=axes('position',[.3,.2,.3,.6]);
+%text(ax.XLim(1)-.5,ax.YLim(2)+.15,'A','HorizontalAlignment','right','FontSize',14,'FontWeight','bold')
+ax=axes('position',[.45,.2,.4,.4]);
 hold on
 a=plot(x,cumsum(y),'o-','DisplayName','without threshold','color',[0,0,0],'linewidth',2)
 ax.XTick=x;
@@ -48,16 +51,50 @@ ax.XLim=[1,9];
 hold on
 a=plot(x,nancumsum(y_nan,2),'o-','DisplayName','with threshold','color',[.5,.5,.5],'linewidth',2)
 ax.XTick=x;
-text(ax.XLim(1)-.5,ax.YLim(2)+.5,'B','HorizontalAlignment','right','FontSize',14,'FontWeight','bold')
+%text(ax.XLim(1)-.5,ax.YLim(2)+.5,'B','HorizontalAlignment','right','FontSize',14,'FontWeight','bold')
 legend('show','Location','northwest')
-ax.FontSize=14
+ax.FontSize=12;
+ax.FontWeight='bold'
 arr.MaxHeadSize=0;
         if ~exist(strcat(analysis_path))
             mkdir(strcat(analysis_path))
         end 
 
 % 
-print(f, '-djpeg', strcat(analysis_path,'/pmi_threshold.jpeg'));
+print(f, '-djpeg', strcat(analysis_path,'/pmi_threshold_presentation.jpeg'));
+%% graph for threshold 
+thr=exp(-.5*(1:1:10));
+f=figure;
+aspect_ration=9.32./4.13;
+y_dim=250;
+set(f,'position',[591 455 aspect_ration*y_dim y_dim]);
+ax=axes('position',[.05,.2,.3,.4]);
+ax.FontSize=12;
+ax.FontWeight='bold'
+hold on
+a=bar(thr);
+a.FaceColor=[1,.2,.2]
+a.LineWidth=2
+ax.YTick=[];
+ax.YLabel.String='R^2'
+ax.XTick=[1,5]
+ax.XTickLabel={'th=0','th>0'};
+% 
+
+thr=gampdf([1:1:10],2.5,2);
+ax=axes('position',[.45,.2,.3,.4]);
+ax.FontSize=12;
+ax.FontWeight='bold'
+hold on
+a=bar(thr);
+a.FaceColor=[1,.2,.2]
+a.LineWidth=2
+ax.YTick=[];
+ax.YLabel.String='R^2'
+ax.XTick=[1,5]
+ax.XTickLabel={'th=0','th>0'};
+print(f, '-djpeg', strcat(analysis_path,'/pmi_threshold_Rsqured.jpeg'));
+
 %% 
 [X,Y] = meshgrid(cosd(theta)',sind(theta)');
 f=figure;
